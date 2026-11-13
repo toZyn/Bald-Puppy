@@ -4,6 +4,8 @@ Bald Puppy releases are tracked on the [repository releases page](https://github
 
 ## Unreleased
 
+- Add `/connect` with OpenAI-compatible provider templates and custom endpoints, Chat Completions streaming and tools, and provider-owned model discovery through `/model`.
+
 - Clean up upstream-only repository administration, simplify issue templates, and document the Bald Puppy workspace.
 
 ## Inherited upstream changes

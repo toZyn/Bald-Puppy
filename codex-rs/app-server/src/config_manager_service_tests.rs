@@ -1339,6 +1339,8 @@ async fn model_provider_settings_use_the_active_profile_layer() -> Result<()> {
     std::fs::write(&profile, "model_provider = 'openai'")?;
     let write = ModelProviderConfigWriteParams {
         settings: ProviderSettingsPatch::CustomGateway(CustomGatewaySettingsParams {
+            wire_api: None,
+            api_key: None,
             name: Some("Gateway".to_owned()),
             base_url: Some(Some("https://gateway.example.test".to_owned())),
             ..Default::default()
@@ -1352,6 +1354,8 @@ async fn model_provider_settings_use_the_active_profile_layer() -> Result<()> {
 
     let write = ModelProviderConfigWriteParams {
         settings: ProviderSettingsPatch::CustomGateway(CustomGatewaySettingsParams {
+            wire_api: None,
+            api_key: None,
             provider_id: Some(created.provider.id.clone()),
             name: Some("Renamed".to_owned()),
             ..Default::default()
@@ -3676,6 +3680,61 @@ async fn model_provider_list_checks_builtin_configuration_fields() -> Result<()>
                 Some(false)
             );
         }
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn compatible_provider_persists_protocol_and_redacts_write_only_key() -> Result<()> {
+    use codex_app_server_protocol::CustomGatewaySettingsParams;
+    use codex_app_server_protocol::ModelProviderConfigWriteParams;
+    use codex_app_server_protocol::ProviderSettingsPatch;
+    let home = tempdir()?;
+    let manager = ConfigManager::new_for_tests(
+        home.path().to_path_buf(),
+        Vec::new(),
+        LoaderOverrides::without_managed_config_for_tests(),
+        CloudConfigBundleLoader::default(),
+    );
+    let params = ModelProviderConfigWriteParams {
+        settings: ProviderSettingsPatch::CustomGateway(CustomGatewaySettingsParams {
+            name: Some("Compatible".into()),
+            base_url: Some(Some("https://example.test/v1".into())),
+            wire_api: Some("chat".into()),
+            api_key: Some("synthetic-write-only-key".into()),
+            ..Default::default()
+        }),
+    };
+    assert!(!format!("{params:?}").contains("synthetic-write-only-key"));
+    let saved = manager.model_provider_config_write(params).await?;
+    assert!(!serde_json::to_string(&saved)?.contains("synthetic-write-only-key"));
+    let disk: toml::Value =
+        toml::from_str(&std::fs::read_to_string(home.path().join("config.toml"))?)?;
+    assert_eq!(
+        disk["model_providers"][&saved.provider.id]["wire_api"].as_str(),
+        Some("chat")
+    );
+    assert_eq!(
+        disk["model_providers"][&saved.provider.id]["experimental_bearer_token"].as_str(),
+        Some("synthetic-write-only-key")
+    );
+    let response = manager
+        .read(ConfigReadParams {
+            include_layers: true,
+            cwd: None,
+        })
+        .await?;
+    assert!(!serde_json::to_string(&response)?.contains("synthetic-write-only-key"));
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            std::fs::metadata(home.path().join("config.toml"))?
+                .permissions()
+                .mode()
+                & 0o077,
+            0
+        );
     }
     Ok(())
 }

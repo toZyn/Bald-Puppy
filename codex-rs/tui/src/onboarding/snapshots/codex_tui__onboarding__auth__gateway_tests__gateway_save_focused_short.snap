@@ -5,4 +5,4 @@ expression: "screen(&widget, 4)"
 › Save
 
 * Required
-Enter the environment variable name on the app server.
+Use an API key or an environment variable on the app server.

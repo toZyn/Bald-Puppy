@@ -39,6 +39,13 @@ impl ChatWidget {
                 return;
             }
         };
+        let presets = if crate::app::provider::uses_provider_owned_catalog(&self.config)
+            && self.model_catalog.provider_may_have_changed()
+        {
+            Vec::new()
+        } else {
+            presets
+        };
         let request_id = uuid::Uuid::new_v4();
         self.model_popup_request_id = Some(request_id);
         if presets.is_empty() {

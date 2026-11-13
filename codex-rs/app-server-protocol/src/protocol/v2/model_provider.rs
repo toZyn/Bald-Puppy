@@ -117,6 +117,15 @@ pub enum GcpProviderId {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[ts(export_to = "v2/")]
 pub struct CustomGatewaySettingsParams {
+    /// OpenAI wire protocol. Omit to retain the existing value (new gateways default to Responses).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub wire_api: Option<String>,
+    /// Write-only bearer credential. Never returned in provider summaries.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub api_key: Option<String>,
+
     /// Omit or pass null to allocate a new custom provider ID.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional = nullable)]
@@ -229,6 +238,8 @@ impl std::fmt::Debug for CustomGatewaySettingsParams {
         f.debug_struct("CustomGatewaySettingsParams")
             .field("name", &self.name)
             .field("base_url", &"[REDACTED]")
+            .field("api_key", &"[REDACTED]")
+            .field("wire_api", &self.wire_api)
             .field("env_key", &self.env_key)
             .field("provider_id", &self.provider_id)
             .finish()

@@ -3937,6 +3937,13 @@ class CustomGatewayProviderSettingsPatch(BaseModel):
         extra="forbid",
         populate_by_name=True,
     )
+    api_key: Annotated[
+        str | None,
+        Field(
+            alias="apiKey",
+            description="Write-only bearer credential. Never returned in provider summaries.",
+        ),
+    ] = None
     base_url: Annotated[str | None, Field(alias="baseUrl")] = None
     env_key: Annotated[str | None, Field(alias="envKey")] = None
     name: str | None = None
@@ -3948,6 +3955,13 @@ class CustomGatewayProviderSettingsPatch(BaseModel):
         ),
     ] = None
     type: Annotated[Literal["customGateway"], Field(title="CustomGatewayProviderSettingsPatchType")]
+    wire_api: Annotated[
+        str | None,
+        Field(
+            alias="wireApi",
+            description="OpenAI wire protocol. Omit to retain the existing value (new gateways default to Responses).",
+        ),
+    ] = None
 
 
 class BedrockProviderSettingsPatch(BaseModel):

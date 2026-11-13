@@ -6,6 +6,7 @@ mod catalog_factory;
 mod chatgpt_base_url;
 mod client_auth;
 mod combined_auth;
+mod compatible_catalog;
 mod gateway_auth;
 mod gateway_export;
 mod gcp;

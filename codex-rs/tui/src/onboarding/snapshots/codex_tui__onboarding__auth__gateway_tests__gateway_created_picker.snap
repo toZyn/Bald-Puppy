@@ -1,6 +1,6 @@
 ---
 source: tui/src/onboarding/gateway_tests.rs
-expression: screen(&widget)
+expression: "screen(&widget, 8)"
 ---
   Use a custom provider or gateway
 
@@ -8,5 +8,5 @@ expression: screen(&widget)
   ○ Office                             office
 › ○ Team gateway                       team-gateway
   Create a custom provider or gateway
-
+↓
   Press enter to use as default or esc to go back

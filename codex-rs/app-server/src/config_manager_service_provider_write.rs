@@ -121,6 +121,30 @@ fn provider_edits(
             };
             let mut fields =
                 patch_fields([("base_url", &patch.base_url), ("env_key", &patch.env_key)]);
+            if let Some(wire) = patch.wire_api.as_deref() {
+                if !matches!(wire, "chat" | "responses") {
+                    return Err(invalid("Wire API must be chat or responses."));
+                }
+                fields.push(("wire_api", Some(wire)));
+            }
+            if let Some(key) = patch.api_key.as_deref() {
+                if key.trim().is_empty() || key.chars().any(char::is_control) {
+                    return Err(invalid("Enter a valid API key."));
+                }
+                if patch.env_key.as_ref().and_then(Option::as_ref).is_some() {
+                    return Err(invalid(
+                        "Use an API key or an environment variable, not both.",
+                    ));
+                }
+                if existing.is_some_and(has_external_auth) {
+                    return Err(invalid(
+                        "Authentication for this provider is managed externally.",
+                    ));
+                }
+                fields.push(("experimental_bearer_token", Some(key)));
+                fields.retain(|(field, _)| *field != "env_key");
+                fields.push(("env_key", None));
+            }
             if patch.name.is_some() {
                 fields.push(("name", Some(name)));
             }
@@ -187,7 +211,10 @@ fn provider_edits(
     {
         fields.push(("name", Some(name)));
     }
-    if builtin.is_none() && existing.is_none() {
+    if builtin.is_none()
+        && existing.is_none()
+        && !fields.iter().any(|(field, _)| *field == "wire_api")
+    {
         fields.push(("wire_api", Some("responses")));
     }
     let escaped_id = provider_id.replace('\\', "\\\\").replace('"', "\\\"");

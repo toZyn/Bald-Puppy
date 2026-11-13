@@ -13,6 +13,7 @@ pub enum SlashCommand {
     // DO NOT ALPHA-SORT! Enum order is presentation order in the popup, so
     // more frequently used commands should be listed first.
     Model,
+    Connect,
     Presets,
     Daybreak,
     Ide,
@@ -132,6 +133,7 @@ impl SlashCommand {
             SlashCommand::Stop => "stop all background terminals",
             SlashCommand::MemoryDrop => "DO NOT USE",
             SlashCommand::MemoryUpdate => "DO NOT USE",
+            SlashCommand::Connect => "connect a provider using an OpenAI-compatible API",
             SlashCommand::Model => "choose what model and reasoning effort to use",
             SlashCommand::Presets => "run or save reusable prompts and slash commands",
             SlashCommand::Daybreak => "turn Daybreak on or off",
@@ -275,6 +277,7 @@ impl SlashCommand {
             | SlashCommand::Archive
             | SlashCommand::Resume
             | SlashCommand::Model
+            | SlashCommand::Connect
             | SlashCommand::Presets
             | SlashCommand::Daybreak
             | SlashCommand::Permissions

@@ -68,7 +68,12 @@ pub trait ModelsEndpointClient: fmt::Debug + Send + Sync {
     /// Returns whether the currently resolved auth can use Codex backend-only models.
     fn uses_codex_backend(&self) -> ModelsEndpointFuture<'_, bool>;
 
-    /// Returns whether this provider supports an authoritative catalog with OpenAI API keys.
+    /// Explicit compatible providers discover their own public OpenAI /models catalog.
+    fn uses_public_models_api(&self) -> bool {
+        false
+    }
+
+    /// Whether the first-party catalog supports discovery with an OpenAI API key.
     fn supports_api_key_models(&self) -> bool {
         false
     }
@@ -939,7 +944,8 @@ impl OpenAiModelsManager {
 
     // A runtime opt-out must hide catalogs fetched before the flag was disabled, too.
     fn api_key_discovery_disabled(&self) -> bool {
-        self.uses_api_key_auth()
+        !self.endpoint_client.uses_public_models_api()
+            && self.uses_api_key_auth()
             && !self.endpoint_client.has_command_auth()
             && (!self.endpoint_client.supports_api_key_models()
                 || !self.settings.api_key_model_discovery_enabled())
@@ -954,7 +960,8 @@ impl OpenAiModelsManager {
     }
 
     async fn should_refresh_models(&self) -> bool {
-        self.endpoint_client.supports_gateway_catalog()
+        self.endpoint_client.uses_public_models_api()
+            || self.endpoint_client.supports_gateway_catalog()
             || self.endpoint_client.uses_codex_backend().await
             || self.endpoint_client.has_command_auth()
             || self.supports_api_key_discovery()

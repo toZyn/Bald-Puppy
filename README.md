@@ -37,6 +37,7 @@ The root `justfile` provides development commands. Cargo and Bazel configuration
 
 - [Getting started](docs/getting-started.md)
 - [Installing and building](docs/install.md)
+- [Connect providers and choose models](docs/providers.md)
 - [Configuration](docs/config.md)
 - [Authentication](docs/authentication.md)
 - [Contributing](docs/contributing.md)

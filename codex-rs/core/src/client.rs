@@ -1334,6 +1334,9 @@ impl ModelClient {
     ///
     /// WebSocket use is controlled by provider capability and session-scoped fallback state.
     pub fn responses_websocket_enabled(&self) -> bool {
+        if self.state.provider.info().wire_api == WireApi::Chat {
+            return false;
+        }
         if !self.state.provider.info().supports_websockets
             || self.state.disable_websockets.load(Ordering::Relaxed)
         {
@@ -2101,6 +2104,7 @@ impl ResponsesHttpExecutor<'_> {
                 client_setup.api_provider,
                 client_setup.api_auth,
             )
+            .with_chat_completions(self.client.state.provider.info().wire_api == WireApi::Chat)
             .with_telemetry(Some(request_telemetry), Some(sse_telemetry));
             let stream_result = client
                 .stream_request_with_observer(request, options, |wire| {
@@ -2638,7 +2642,7 @@ impl ModelClientSession {
     ) -> Result<ResponseStream> {
         let wire_api = self.client.state.provider.info().wire_api;
         match wire_api {
-            WireApi::Responses => {
+            WireApi::Responses | WireApi::Chat => {
                 if self.client.responses_websocket_enabled() {
                     let request_trace = current_span_w3c_trace_context();
                     match self

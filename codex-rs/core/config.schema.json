@@ -7766,6 +7766,13 @@
             "responses"
           ],
           "type": "string"
+        },
+        {
+          "description": "OpenAI-compatible `/v1/chat/completions` (including custom providers).",
+          "enum": [
+            "chat"
+          ],
+          "type": "string"
         }
       ]
     },

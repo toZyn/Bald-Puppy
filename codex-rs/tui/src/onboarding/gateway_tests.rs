@@ -86,6 +86,8 @@ async fn create_highlights_the_saved_gateway_until_explicitly_selected() -> colo
         &widget.app_server_request_handle,
         codex_app_server_protocol::ModelProviderConfigWriteParams {
             settings: ProviderSettingsPatch::CustomGateway(CustomGatewaySettingsParams {
+                wire_api: None,
+                api_key: None,
                 name: Some("Office".into()),
                 base_url: Some(Some("https://office.example.test/v1".into())),
                 ..Default::default()
@@ -104,24 +106,30 @@ async fn create_highlights_the_saved_gateway_until_explicitly_selected() -> colo
 
     › Name*  Team gateway
       Base URL*  https://gateway.example/v1
-      API key variable  $TEAM_API_KEY
+      API key  Paste API key
+      API key variable  $TEAM_API_KEY (optional)
+      API protocol  chat
       Save
 
     * Required
-    Enter the environment variable name on the app server.
+    Use an API key or an environment variable on the app server.
     tab move · enter next/save · esc back
     ");
     widget.handle_paste("Team gateway".into());
     widget.handle_key_event(KeyCode::Down.into());
     widget.handle_paste("https://team.example.test/v1?".into());
     widget.handle_key_event(KeyCode::Down.into());
+    widget.handle_key_event(KeyCode::Down.into());
     widget.handle_paste("TEAM_KEY-".into());
+    widget.handle_key_event(KeyCode::Down.into());
     widget.handle_key_event(KeyCode::Down.into());
     insta::assert_snapshot!("gateway_save_focused_short", screen(&widget, /*height*/ 4));
     widget.handle_key_event(KeyCode::Enter.into());
     insta::assert_snapshot!("gateway_save_error_short", screen(&widget, /*height*/ 4));
     widget.handle_key_event(KeyCode::Up.into());
+    widget.handle_key_event(KeyCode::Up.into());
     widget.handle_key_event(KeyCode::Backspace.into());
+    widget.handle_key_event(KeyCode::Down.into());
     widget.handle_key_event(KeyCode::Down.into());
     widget.handle_key_event(KeyCode::Enter.into());
     widget.advance_gateway_request().await;
@@ -130,7 +138,11 @@ async fn create_highlights_the_saved_gateway_until_explicitly_selected() -> colo
     // Correct the invalid URL and keep the other fields.
     widget.handle_key_event(KeyCode::Up.into());
     widget.handle_key_event(KeyCode::Up.into());
+    widget.handle_key_event(KeyCode::Up.into());
+    widget.handle_key_event(KeyCode::Up.into());
     widget.handle_key_event(KeyCode::Backspace.into());
+    widget.handle_key_event(KeyCode::Down.into());
+    widget.handle_key_event(KeyCode::Down.into());
     widget.handle_key_event(KeyCode::Down.into());
     widget.handle_key_event(KeyCode::Down.into());
     widget.handle_key_event(KeyCode::Enter.into());
@@ -172,7 +184,7 @@ async fn create_highlights_the_saved_gateway_until_explicitly_selected() -> colo
                     "name": "Team gateway",
                     "base_url": "https://team.example.test/v1",
                     "env_key": "TEAM_KEY",
-                    "wire_api": "responses",
+                    "wire_api": "chat",
                 },
             },
         })

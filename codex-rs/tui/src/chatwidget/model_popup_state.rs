@@ -10,7 +10,7 @@ use super::*;
 impl ChatWidget {
     pub(crate) fn model_picker_unavailable(&self) -> Option<String> {
         match self.model_catalog.provider_write.try_lock() {
-            Ok(changed) => changed.then(|| "The model list may be out of date. Restart the app server and TUI to refresh /model.".into()),
+            Ok(changed) => (*changed && !crate::app::provider::uses_provider_owned_catalog(&self.config)).then(|| "The model list may be out of date. Restart the app server and TUI to refresh /model.".into()),
             Err(_) => Some("Saving the default provider. Try /model after the save finishes.".into()),
         }
     }
@@ -46,7 +46,9 @@ impl ChatWidget {
     }
 
     pub(super) fn refresh_account_scoped_models(&mut self) {
-        if self.model_catalog.provider_may_have_changed() {
+        if self.model_catalog.provider_may_have_changed()
+            && !crate::app::provider::uses_provider_owned_catalog(&self.config)
+        {
             return;
         }
         if self.status_account_display == Some(StatusAccountDisplay::ApiKey) {
@@ -78,7 +80,8 @@ impl ChatWidget {
         request_id: uuid::Uuid,
         result: Result<Vec<ModelPreset>, String>,
     ) -> bool {
-        if self.model_catalog.provider_may_have_changed()
+        if (self.model_catalog.provider_may_have_changed()
+            && !crate::app::provider::uses_provider_owned_catalog(&self.config))
             || !self.model_popup_request_is_current(request_id)
         {
             return false;
@@ -98,7 +101,9 @@ impl ChatWidget {
         let Ok(presets) = result else {
             return false;
         };
-        if presets.is_empty() || self.model_catalog.models == presets {
+        if (presets.is_empty() && !crate::app::provider::uses_provider_owned_catalog(&self.config))
+            || self.model_catalog.models == presets
+        {
             return false;
         }
         Arc::make_mut(&mut self.model_catalog).models = presets;

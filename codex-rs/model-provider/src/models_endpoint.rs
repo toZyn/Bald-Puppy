@@ -218,6 +218,9 @@ impl OpenAiModelsEndpoint {
                 client_version,
             )
             .map_err(map_api_error)?,
+            None if self.provider_info.uses_public_models_api() => {
+                api_provider.build_request(http::Method::GET, "models").url
+            }
             None => ModelsClient::<ReqwestTransport>::request_url(&api_provider, client_version),
         };
         let auth_telemetry = auth_header_telemetry(api_auth.as_ref())
@@ -242,31 +245,55 @@ impl OpenAiModelsEndpoint {
                 .await?;
             let client = ModelsClient::new(transport, api_provider, api_auth)
                 .with_telemetry(Some(request_telemetry));
-            client
-                .list_models(
-                    request_url,
-                    HeaderMap::new(),
-                    /*response_body_limit_bytes*/ None,
-                )
-                .await
-                .map_err(|mut error| {
-                    if self.provider_info.model_catalog_url.is_some()
-                        && let codex_api::ApiError::Transport(TransportError::Http {
-                            url,
-                            headers,
-                            body,
-                            ..
-                        }) = &mut error
-                    {
-                        // Provider diagnostics may echo URL credentials or other secrets.
-                        *url = None;
-                        *headers = None;
-                        *body = None;
-                    }
-                    map_api_error(error)
-                })
+            if self.provider_info.uses_public_models_api() {
+                let (bytes, etag) = client
+                    .list_models_raw(request_url, HeaderMap::new(), Some(4 * 1024 * 1024))
+                    .await
+                    .map_err(map_api_error)?;
+                let value: serde_json::Value = serde_json::from_slice(&bytes).map_err(|_| {
+                    CodexErr::InvalidRequest(
+                        "Invalid JSON from the provider /models endpoint.".into(),
+                    )
+                })?;
+                let models = if value.get("models").is_some() {
+                    serde_json::from_value::<codex_protocol::openai_models::ModelsResponse>(value)
+                        .map_err(|_| {
+                            CodexErr::InvalidRequest("Invalid native model catalog.".into())
+                        })?
+                        .models
+                } else {
+                    crate::compatible_catalog::decode(value)?
+                };
+                Ok((models, etag))
+            } else {
+                client
+                    .list_models(
+                        request_url,
+                        HeaderMap::new(),
+                        /*response_body_limit_bytes*/ None,
+                    )
+                    .await
+                    .map_err(|mut error| {
+                        if self.provider_info.model_catalog_url.is_some()
+                            && let codex_api::ApiError::Transport(TransportError::Http {
+                                url,
+                                headers,
+                                body,
+                                ..
+                            }) = &mut error
+                        {
+                            // Provider diagnostics may echo URL credentials or other secrets.
+                            *url = None;
+                            *headers = None;
+                            *body = None;
+                        }
+                        map_api_error(error)
+                    })
+            }
         }?;
-        if self.provider_info.model_catalog_url.is_some() {
+        if self.provider_info.model_catalog_url.is_some()
+            || self.provider_info.uses_public_models_api()
+        {
             let mut slugs = HashSet::new();
             if models
                 .iter()
@@ -312,6 +339,10 @@ impl ModelsEndpointClient for OpenAiModelsEndpoint {
             runtime_auth: self.runtime_auth.clone(),
             transport_builder: Arc::clone(&self.transport_builder),
         }))
+    }
+
+    fn uses_public_models_api(&self) -> bool {
+        self.provider_info.uses_public_models_api()
     }
 
     fn supports_api_key_models(&self) -> bool {

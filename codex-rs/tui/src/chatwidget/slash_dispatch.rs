@@ -372,6 +372,11 @@ impl ChatWidget {
                     .counter("codex.thread.rename", /*inc*/ 1, &[]);
                 self.show_rename_prompt();
             }
+            SlashCommand::Connect => {
+                let (view, event) = crate::app::provider::loading();
+                self.bottom_pane.show_selection_view(view);
+                self.app_event_tx.send(AppEvent::Provider(event));
+            }
             SlashCommand::Model => {
                 self.open_model_popup();
                 self.defer_input_until_settings_applied();
@@ -1369,6 +1374,7 @@ impl ChatWidget {
             | SlashCommand::Compact
             | SlashCommand::Review
             | SlashCommand::Model
+            | SlashCommand::Connect
             | SlashCommand::Presets
             | SlashCommand::Plan
             | SlashCommand::Goal

@@ -26,11 +26,22 @@ impl AppServerSession {
         self.available_models = models;
     }
 
+    #[cfg(test)]
     pub(crate) fn fetch_models(&self, request_id: Uuid, app_event_tx: AppEventSender) {
-        let models = list(
+        self.fetch_models_for_provider(request_id, app_event_tx, None);
+    }
+
+    pub(crate) fn fetch_models_for_provider(
+        &self,
+        request_id: Uuid,
+        app_event_tx: AppEventSender,
+        provider: Option<String>,
+    ) {
+        let models = list_for_provider(
             self.thread_params_mode,
             self.request_handle(),
             RequestId::String(format!("model-list-{request_id}")),
+            provider,
         );
         tokio::spawn(async move {
             let result = models.await.map_err(|err| err.to_string());
@@ -44,32 +55,45 @@ pub(super) async fn list(
     request_handle: AppServerRequestHandle,
     request_id: RequestId,
 ) -> Result<Vec<ModelPreset>, TypedRequestError> {
-    let response: ModelListResponse = match request_handle
-        .request_typed(ClientRequest::ModelList {
-            request_id,
-            params: ModelListParams {
-                cursor: None,
-                limit: None,
-                include_hidden: Some(true),
-                model_provider: None,
-            },
-        })
-        .await
-    {
-        Ok(response) => response,
-        // Older Cloud servers do not expose model discovery. Preserve their startup behavior.
-        Err(TypedRequestError::Server { source, .. })
-            if mode == ThreadParamsMode::Cloud && source.code == -32601 =>
+    list_for_provider(mode, request_handle, request_id, None).await
+}
+
+async fn list_for_provider(
+    mode: ThreadParamsMode,
+    request_handle: AppServerRequestHandle,
+    request_id: RequestId,
+    provider: Option<String>,
+) -> Result<Vec<ModelPreset>, TypedRequestError> {
+    let mut models = Vec::new();
+    let mut cursor = None;
+    loop {
+        let response: ModelListResponse = match request_handle
+            .request_typed(ClientRequest::ModelList {
+                request_id: request_id.clone(),
+                params: ModelListParams {
+                    cursor: cursor.clone(),
+                    limit: None,
+                    include_hidden: Some(true),
+                    model_provider: provider.clone(),
+                },
+            })
+            .await
         {
-            return Ok(Vec::new());
+            Ok(response) => response,
+            // Older Cloud servers do not expose model discovery. Preserve their startup behavior.
+            Err(TypedRequestError::Server { source, .. })
+                if mode == ThreadParamsMode::Cloud && source.code == -32601 =>
+            {
+                return Ok(Vec::new());
+            }
+            Err(error) => return Err(error),
+        };
+        models.extend(response.data.into_iter().map(model_preset_from_api_model));
+        match response.next_cursor {
+            Some(next) if cursor.as_ref() != Some(&next) => cursor = Some(next),
+            _ => return Ok(models),
         }
-        Err(error) => return Err(error),
-    };
-    Ok(response
-        .data
-        .into_iter()
-        .map(model_preset_from_api_model)
-        .collect())
+    }
 }
 
 #[cfg(test)]

@@ -104,3 +104,32 @@ pub(super) fn request_error(err: TypedRequestError) -> String {
     }
     format!("Could not load model providers: {err}")
 }
+
+/// A newly connected provider must not inherit a model ID from another vendor.
+pub(crate) async fn set_default_compatible_provider(
+    handle: &AppServerRequestHandle,
+    id: &str,
+) -> Result<ConfigWriteResponse, TypedRequestError> {
+    handle
+        .request_typed(ClientRequest::ConfigBatchWrite {
+            request_id: RequestId::String(Uuid::new_v4().to_string()),
+            params: codex_app_server_protocol::ConfigBatchWriteParams {
+                edits: vec![
+                    codex_app_server_protocol::ConfigEdit {
+                        key_path: "model_provider".into(),
+                        value: serde_json::json!(id),
+                        merge_strategy: MergeStrategy::Replace,
+                    },
+                    codex_app_server_protocol::ConfigEdit {
+                        key_path: "model".into(),
+                        value: serde_json::Value::Null,
+                        merge_strategy: MergeStrategy::Replace,
+                    },
+                ],
+                file_path: None,
+                expected_version: None,
+                reload_user_config: false,
+            },
+        })
+        .await
+}

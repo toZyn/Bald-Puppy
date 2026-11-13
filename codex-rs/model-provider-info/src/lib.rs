@@ -35,6 +35,7 @@ use std::sync::RwLock;
 use std::time::Duration;
 
 mod capabilities;
+pub mod compatible_presets;
 mod gateway_oauth;
 mod oauth_session;
 pub use capabilities::ModelProviderCapabilities;
@@ -107,7 +108,6 @@ pub const AMAZON_BEDROCK_DEFAULT_BASE_URL: &str =
     "https://bedrock-mantle.us-east-1.api.aws/openai/v1";
 const AMAZON_BEDROCK_MANTLE_CLIENT_AGENT_HEADER: &str = "x-amzn-mantle-client-agent";
 const AMAZON_BEDROCK_MANTLE_CLIENT_AGENT_VALUE: &str = "codex";
-const CHAT_WIRE_API_REMOVED_ERROR: &str = "`wire_api = \"chat\"` is no longer supported.\nHow to fix: set `wire_api = \"responses\"` in your provider config.\nMore info: https://github.com/openai/codex/discussions/7782";
 pub const LEGACY_OLLAMA_CHAT_PROVIDER_ID: &str = "ollama-chat";
 pub const OLLAMA_CHAT_PROVIDER_REMOVED_ERROR: &str = "`ollama-chat` is no longer supported.\nHow to fix: replace `ollama-chat` with `ollama` in `model_provider`, `oss_provider`, or `--local-provider`.\nMore info: https://github.com/openai/codex/discussions/7782";
 
@@ -118,12 +118,15 @@ pub enum WireApi {
     /// The Responses API exposed by OpenAI at `/v1/responses`.
     #[default]
     Responses,
+    /// OpenAI-compatible `/v1/chat/completions` (including custom providers).
+    Chat,
 }
 
 impl fmt::Display for WireApi {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let value = match self {
             Self::Responses => "responses",
+            Self::Chat => "chat",
         };
         f.write_str(value)
     }
@@ -137,8 +140,11 @@ impl<'de> Deserialize<'de> for WireApi {
         let value = String::deserialize(deserializer)?;
         match value.as_str() {
             "responses" => Ok(Self::Responses),
-            "chat" => Err(serde::de::Error::custom(CHAT_WIRE_API_REMOVED_ERROR)),
-            _ => Err(serde::de::Error::unknown_variant(&value, &["responses"])),
+            "chat" => Ok(Self::Chat),
+            _ => Err(serde::de::Error::unknown_variant(
+                &value,
+                &["responses", "chat"],
+            )),
         }
     }
 }
@@ -323,6 +329,18 @@ fn default_aws_auth_refresh_timeout_ms() -> NonZeroU64 {
 }
 
 impl ModelProviderInfo {
+    /// Explicit compatible endpoints own their model catalog, rather than the bundled OpenAI list.
+    pub fn uses_public_models_api(&self) -> bool {
+        self.wire_api == WireApi::Chat
+            || (self.base_url.is_some()
+                && self.model_catalog_url.is_none()
+                && !self.requires_openai_auth
+                && !self.is_openai()
+                && !self.is_amazon_bedrock()
+                && !self.is_amazon_bedrock_runtime()
+                && !self.is_gcp())
+    }
+
     /// Checks that a configured Bedrock entry only customizes supported fields.
     /// Call this on the override before merging it with the built-in provider.
     pub fn validate_bedrock_override(&self) -> Result<(), String> {

@@ -32,6 +32,16 @@ mod write;
 use fields::Field;
 use fields::provider_fields;
 
+/// Remote clients may know the selected ID before their legacy provider metadata refreshes.
+/// Custom IDs are allocated outside the reserved first-party/cloud provider namespace.
+pub(crate) fn uses_provider_owned_catalog(config: &crate::legacy_core::config::Config) -> bool {
+    config.model_provider.uses_public_models_api()
+        || !matches!(
+            config.model_provider_id.as_str(),
+            "openai" | "gcp" | "amazon-bedrock" | "amazon-bedrock-runtime"
+        )
+}
+
 const LOADING_VIEW: &str = "model_provider_loading";
 pub(super) const LIST_VIEW: &str = "model_provider_list";
 pub(crate) const CREATE_CUSTOM_PROVIDER: &str = "Create a custom provider or gateway";
@@ -62,6 +72,11 @@ pub(crate) enum Event {
         backend: BackendId,
         dismissed: watch::Receiver<()>,
         write: write::Write,
+    },
+    Connect {
+        catalog: Arc<Catalog>,
+        preset: usize,
+        dismissed: watch::Receiver<()>,
     },
     Written(write::Completion),
 }
@@ -218,6 +233,21 @@ pub(super) fn handle(app: &mut App, tui: &mut Tui, server: &AppServerSession, ev
                 app.chat_widget.show_bottom_pane_view(view);
             }
         }
+        Event::Connect {
+            catalog,
+            preset,
+            dismissed,
+        } => {
+            if backend == catalog.backend
+                && matches!(dismissed.has_changed(), Ok(false))
+                && app.overlay.is_none()
+                && app.chat_widget.active_view_is(LIST_VIEW)
+            {
+                let draft = editor::Draft::from_preset(preset, &catalog.page.data);
+                let view = edit_view(app, backend, draft, None);
+                app.chat_widget.show_bottom_pane_view(view);
+            }
+        }
         Event::Write {
             backend,
             dismissed,
@@ -316,6 +346,26 @@ fn list(
             }
         })
         .collect();
+    for (preset, template) in
+        codex_model_provider_info::compatible_presets::COMPATIBLE_PROVIDER_PRESETS
+            .iter()
+            .enumerate()
+    {
+        let catalog = Arc::clone(&catalog);
+        let dismissed = dismissed.clone();
+        items.push(SelectionItem {
+            name: format!("Connect {}", template.name),
+            description: Some(template.base_url.into()),
+            actions: vec![Box::new(move |tx| {
+                tx.send(AppEvent::Provider(Event::Connect {
+                    catalog: Arc::clone(&catalog),
+                    preset,
+                    dismissed: dismissed.clone(),
+                }))
+            })],
+            ..Default::default()
+        });
+    }
     items.push(SelectionItem {
         name: CREATE_CUSTOM_PROVIDER.into(),
         footer_hint: Some(crate::bottom_pane::popup_consts::picker_hint_line_for_keymap(keymap)),
