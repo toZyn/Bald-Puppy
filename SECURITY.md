@@ -1,17 +1,15 @@
-# Security Policy
+# Security policy
 
-Thank you for helping us keep Codex secure!
+## Bald Puppy reports
 
-## Reporting Security Issues
+This repository is maintained by toZyn. OpenAI's Bugcrowd program does not serve as a reporting channel for Bald Puppy-specific changes.
 
-The security is essential to OpenAI's mission. We appreciate the work of security researchers acting in good faith to identify and responsibly report potential vulnerabilities, helping us maintain strong privacy and security standards for our users and technology.
+Do not include credentials, private data, or exploit details in public issues. If GitHub private vulnerability reporting is enabled, use the repository's Security tab to submit a private report. Otherwise, ask the maintainer to establish a private reporting channel before sharing sensitive details.
 
-Our security program is managed through Bugcrowd, and we ask that any validated vulnerabilities be reported via the [Bugcrowd program](https://bugcrowd.com/engagements/openai).
+## Upstream Codex reports
 
-## Vulnerability Disclosure Program
+For vulnerabilities in the official OpenAI Codex distribution, follow the [upstream security policy](https://github.com/openai/codex/security/policy).
 
-Our Vulnerability Program Guidelines are defined on our [Bugcrowd program page](https://bugcrowd.com/engagements/openai).
+## Runtime security
 
-## How to operate CODEX safely
-
-For details on Codex security boundaries, including sandboxing, approvals, and network controls, see [Agent approvals & security](https://developers.openai.com/codex/agent-approvals-security).
+The inherited implementation includes sandboxing, approvals, and network controls. See the [upstream security documentation](https://developers.openai.com/codex/agent-approvals-security) and review the local configuration before running the agent.
