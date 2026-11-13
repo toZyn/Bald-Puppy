@@ -1,0 +1,15 @@
+name: Documentation issue
+description: Report missing, incorrect, or confusing documentation
+body:
+  - type: input
+    id: location
+    attributes:
+      label: File path or URL
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What needs to change?
+    validations:
+      required: true

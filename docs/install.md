@@ -8,6 +8,10 @@
 | Git (optional, recommended) | 2.23+ for built-in PR helpers                                   |
 | RAM                         | 4-GB minimum (8-GB recommended)                                 |
 
+### Upstream distributions
+
+The upstream installers, npm package, and release assets install OpenAI Codex. To run Bald Puppy from this repository, follow the source build below.
+
 ### DotSlash
 
 The GitHub Release also contains a [DotSlash](https://dotslash-cli.com/) file for the Codex CLI named `codex`. Using a DotSlash file makes it possible to make a lightweight commit to source control to ensure all contributors use the same version of an executable, regardless of what platform they use for development.
@@ -16,8 +20,8 @@ The GitHub Release also contains a [DotSlash](https://dotslash-cli.com/) file fo
 
 ```bash
 # Clone the repository and navigate to the root of the Cargo workspace.
-git clone https://github.com/openai/codex.git
-cd codex/codex-rs
+git clone https://github.com/toZyn/Bald-Puppy.git
+cd Bald-Puppy/codex-rs
 
 # Install the Rust toolchain, if necessary.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
