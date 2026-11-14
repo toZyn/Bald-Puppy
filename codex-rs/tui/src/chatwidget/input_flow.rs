@@ -28,6 +28,7 @@ impl ChatWidget {
             // Inline commands still follow so their output (including usage errors) is visible.
             InputResult::Command(
                 SlashCommand::Model
+                | SlashCommand::Connect
                 | SlashCommand::Presets
                 | SlashCommand::Keymap
                 | SlashCommand::Memories

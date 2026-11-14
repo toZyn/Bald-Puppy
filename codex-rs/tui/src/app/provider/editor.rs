@@ -115,7 +115,11 @@ impl ProviderForm {
         // Holding Enter on a field must not carry its activation onto Save.
         if key.kind == KeyEventKind::Press && key_hint::plain(KeyCode::Enter).is_press(key) {
             if self.draft.selected == self.inputs.len() {
-                self.draft.changes = self.changes().collect();
+                let changes: Vec<_> = self.changes().collect();
+                for (field, _) in &self.inputs {
+                    self.draft.changes.remove(field);
+                }
+                self.draft.changes.extend(changes);
                 match self.draft.patch() {
                     Ok(params) => return Some(params),
                     Err(message) => self.error = Some(message.into()),
@@ -168,6 +172,10 @@ impl ProviderForm {
             || CREATE_CUSTOM_PROVIDER.to_owned(),
             |p| format!("Edit {}", p.name),
         );
+        let title = self
+            .draft
+            .preset
+            .map_or(title, |preset| format!("Connect {}", preset.name));
         let wrap_width = usize::from(width.max(1));
         let mut lines = word_wrap_lines([Line::from(title.bold())], wrap_width);
         lines.push(Line::default());
@@ -190,7 +198,9 @@ impl ProviderForm {
             let example = match field {
                 Field::Name => "Team gateway",
                 Field::Url => "https://gateway.example/v1",
-                Field::Variable => "TEAM_API_KEY",
+                Field::Variable => "TEAM_API_KEY (optional)",
+                Field::ApiKey => "Paste API key",
+                Field::Wire => "chat",
                 _ => "",
             };
             let mut line = Line::from(label);
@@ -202,7 +212,11 @@ impl ProviderForm {
             if *field == Field::Variable && width > 1 {
                 line.push_span("$".dim());
             }
-            let display = if focused {
+            let display = if *field == Field::ApiKey && focused {
+                FieldDisplay::FocusedSecret
+            } else if *field == Field::ApiKey {
+                FieldDisplay::UnfocusedSecret
+            } else if focused {
                 FieldDisplay::Focused
             } else {
                 FieldDisplay::Unfocused
@@ -230,7 +244,7 @@ impl ProviderForm {
         let has = |field| self.inputs.iter().any(|(key, _)| *key == field);
         if has(Field::Name) {
             let hint = if has(Field::Variable) {
-                "Enter the environment variable name on the app server."
+                "Use an API key or an environment variable on the app server."
             } else {
                 "Authentication is managed on the app server."
             };

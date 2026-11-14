@@ -160,6 +160,13 @@ impl Picker {
             footer_hint: Some(hint("to create")),
             ..Default::default()
         });
+        for preset in codex_model_provider_info::compatible_presets::COMPATIBLE_PROVIDER_PRESETS {
+            items.push(SelectionItem {
+                name: format!("Connect {}", preset.name),
+                description: Some(preset.base_url.into()),
+                ..Default::default()
+            });
+        }
         // Like the other startup pickers, consume the selection directly before the app event loop exists.
         let (tx, _) = unbounded_channel();
         let list = ListSelectionView::new(
@@ -180,7 +187,12 @@ impl Picker {
     fn activate(self: Box<Self>, index: usize, handle: AppServerRequestHandle) -> GatewayStep {
         let Some(provider) = self.page.data.get(index) else {
             let form = ProviderForm::new(
-                Draft::new(/*provider*/ None, &self.page.data),
+                if index > self.page.data.len() && index <= self.page.data.len() + codex_model_provider_info::compatible_presets::COMPATIBLE_PROVIDER_PRESETS.len()
+                {
+                    Draft::from_preset(index - self.page.data.len() - 1, &self.page.data)
+                } else {
+                    Draft::new(/*provider*/ None, &self.page.data)
+                },
                 /*error*/ None,
             );
             return GatewayStep::Editing {

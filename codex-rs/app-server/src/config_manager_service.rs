@@ -208,6 +208,27 @@ impl ConfigManager {
             }
         }
 
+        if let Some(providers) = response
+            .config
+            .additional
+            .get_mut("model_providers")
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            for provider in providers.values_mut() {
+                redact_provider_key(provider);
+            }
+        }
+        for layer in response.layers.iter_mut().flatten() {
+            if let Some(providers) = layer
+                .config
+                .get_mut("model_providers")
+                .and_then(serde_json::Value::as_object_mut)
+            {
+                for provider in providers.values_mut() {
+                    redact_provider_key(provider);
+                }
+            }
+        }
         Ok(response)
     }
 
@@ -1061,3 +1082,9 @@ fn find_effective_layer(
 #[cfg(test)]
 #[path = "config_manager_service_tests.rs"]
 mod tests;
+
+fn redact_provider_key(provider: &mut serde_json::Value) {
+    if let Some(key) = provider.get_mut("experimental_bearer_token") {
+        *key = serde_json::json!("[REDACTED]");
+    }
+}

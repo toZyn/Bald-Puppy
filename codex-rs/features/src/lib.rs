@@ -2316,7 +2316,7 @@ pub const FEATURES: &[FeatureSpec] = &[
         id: Feature::GatewaySetupWizard,
         key: "gateway_setup_wizard",
         stage: Stage::Stable,
-        default_enabled: false,
+        default_enabled: true,
     },
     FeatureSpec {
         id: Feature::Personality,

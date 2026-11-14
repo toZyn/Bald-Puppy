@@ -138,7 +138,7 @@ async fn entering_a_key_for_a_legacy_gateway_prompts_for_its_address() {
     Enter a base URL to use this API key variable.
 
     * Required
-    Enter the environment variable name on the app server.
+    Use an API key or an environment variable on the app server.
     tab move · enter next/save · esc back
     ");
 }
@@ -170,4 +170,53 @@ fn cloud_provider_edits_preserve_credentials() {
         wire(gcp.patch().unwrap()),
         json!({"type":"gcp", "providerId":"gcp", "location":null})
     );
+}
+
+#[test]
+fn compatible_presets_only_ask_for_required_fields() {
+    let mut cloud = Draft::from_preset(1, &[]);
+    assert_eq!(cloud.fields(), vec![(Field::ApiKey, None)]);
+    assert!(cloud.patch().is_err());
+    cloud.changes.insert(Field::ApiKey, "test-secret".into());
+    let patch = wire(cloud.patch().unwrap());
+    assert_eq!(patch["baseUrl"], "https://openrouter.ai/api/v1");
+    assert_eq!(patch["wireApi"], "chat");
+    assert_eq!(patch["apiKey"], "test-secret");
+    let local = Draft::from_preset(11, &[]);
+    assert_eq!(
+        local.fields(),
+        vec![(Field::Url, Some("http://localhost:11434/v1"))]
+    );
+    assert!(local.patch().is_ok());
+}
+
+#[test]
+fn preset_form_keeps_hidden_defaults_and_masks_the_key() {
+    let mut form = ProviderForm::new(Draft::from_preset(1, &[]), None);
+    form.active_input_mut().unwrap().paste("test-secret");
+    form.input(KeyCode::Enter.into());
+    let patch = wire(form.input(KeyCode::Enter.into()).unwrap());
+    assert_eq!(patch["name"], "OpenRouter");
+    assert_eq!(patch["baseUrl"], "https://openrouter.ai/api/v1");
+    assert_eq!(patch["apiKey"], "test-secret");
+    let area = Rect::new(0, 0, 80, 12);
+    let mut buffer = Buffer::empty(area);
+    form.render(area, &mut buffer);
+    let screen: String = buffer.content.iter().map(|c| c.symbol()).collect();
+    assert!(!screen.contains("test-secret"));
+}
+
+#[test]
+fn custom_connection_rejects_invalid_protocol_and_conflicting_auth() {
+    let mut draft = Draft::new(None, &[]);
+    draft.changes.insert(Field::Name, "Private".into());
+    draft
+        .changes
+        .insert(Field::Url, "http://localhost:8000/v1".into());
+    draft.changes.insert(Field::Wire, "anthropic".into());
+    assert!(draft.patch().is_err());
+    draft.changes.insert(Field::Wire, "chat".into());
+    draft.changes.insert(Field::ApiKey, "secret".into());
+    draft.changes.insert(Field::Variable, "API_KEY".into());
+    assert!(draft.patch().is_err());
 }

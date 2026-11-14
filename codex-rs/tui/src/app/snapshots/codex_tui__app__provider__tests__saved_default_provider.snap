@@ -6,9 +6,14 @@ expression: "render_bottom_popup(&app.chat_widget, 100)"
   Current chat: test-provider · Default for new chats: gateway
 
 
-› 1. ● Example Gateway                    gateway
-  2. ○ OpenAI                             openai
-  3. Create a custom provider or gateway
-
+› 1. ● Example Gateway     gateway
+  2. ○ OpenAI              openai
+  3. Connect OpenAI API    https://api.openai.com/v1
+  4. Connect OpenRouter    https://openrouter.ai/api/v1
+  5. Connect Groq          https://api.groq.com/openai/v1
+  6. Connect DeepSeek      https://api.deepseek.com
+  7. Connect Together AI   https://api.together.ai/v1
+  8. Connect Fireworks AI  https://api.fireworks.ai/inference/v1
+↓
   /new now uses gateway. Restart the app server and TUI to refresh /model.
   enter details · esc back

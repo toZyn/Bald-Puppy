@@ -90,17 +90,44 @@ impl Write {
     ) -> Result<SaveNotice, String> {
         match self {
             Self::Settings(settings) => {
-                rpc::write_provider(handle, settings.1.clone())
-                    .await
-                    .map(|result| match result {
-                        rpc::ProviderWrite::Saved(_) => {
-                            SaveNotice::Saved("Saved provider configuration.".into())
+                let connect = matches!(&settings.1.settings, codex_app_server_protocol::ProviderSettingsPatch::CustomGateway(p) if p.provider_id.is_none() && p.wire_api.is_some());
+                match rpc::write_provider(handle, settings.1.clone()).await? {
+                    rpc::ProviderWrite::Saved(provider) if connect => {
+                        let response = rpc::set_default_compatible_provider(handle, &provider.id)
+                            .await
+                            .map_err(|error| {
+                                if matches!(
+                                    error,
+                                    TypedRequestError::Transport { .. }
+                                        | TypedRequestError::Deserialize { .. }
+                                ) {
+                                    *provider_changed = true;
+                                }
+                                format!("Saved {}, but could not select it: {error}", provider.name)
+                            })?;
+                        match response.status {
+                            WriteStatus::Ok => {
+                                *provider_changed = true;
+                                Ok(SaveNotice::Saved(format!(
+                                    "Connected {}. Use /new, then /model to choose its models.",
+                                    provider.name
+                                )))
+                            }
+                            WriteStatus::OkOverridden => Ok(SaveNotice::Saved(format!(
+                                "Saved {}. {}",
+                                provider.name,
+                                rpc::override_reason(response)
+                            ))),
                         }
-                        rpc::ProviderWrite::UnconfirmedCreate => SaveNotice::UnconfirmedCreate,
-                    })
+                    }
+                    rpc::ProviderWrite::Saved(_) => {
+                        Ok(SaveNotice::Saved("Saved provider configuration.".into()))
+                    }
+                    rpc::ProviderWrite::UnconfirmedCreate => Ok(SaveNotice::UnconfirmedCreate),
+                }
             }
             Self::Default(id) => {
-                let response = rpc::set_default_provider(handle, id)
+                let response = rpc::set_default_compatible_provider(handle, id)
                     .await
                     .map_err(|error| match error {
                         TypedRequestError::Server { .. } => {

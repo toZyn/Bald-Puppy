@@ -217,7 +217,13 @@ pub(super) fn supported_fields(
         }
         (Some(_), GCP_PROVIDER_ID) => &["project_id", "location", "credential_file"],
         (Some(_), _) => &[],
-        (None, _) => &["name", "base_url", "env_key"],
+        (None, _) => &[
+            "name",
+            "base_url",
+            "env_key",
+            "wire_api",
+            "experimental_bearer_token",
+        ],
     }
 }
 

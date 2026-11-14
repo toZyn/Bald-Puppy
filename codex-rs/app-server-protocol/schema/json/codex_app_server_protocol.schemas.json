@@ -19545,6 +19545,13 @@
           {
             "additionalProperties": false,
             "properties": {
+              "apiKey": {
+                "description": "Write-only bearer credential. Never returned in provider summaries.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "baseUrl": {
                 "type": [
                   "string",
@@ -19573,6 +19580,13 @@
                 ],
                 "title": "CustomGatewayProviderSettingsPatchType",
                 "type": "string"
+              },
+              "wireApi": {
+                "description": "OpenAI wire protocol. Omit to retain the existing value (new gateways default to Responses).",
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "required": [

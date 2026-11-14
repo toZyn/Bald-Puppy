@@ -191,7 +191,7 @@ impl App {
             AppEvent::ScopedModelPicker { backend, thread_id, event } => {
                 if backend != app_server.backend_id()
                     || thread_id != self.chat_widget.thread_id()
-                    || self.chat_widget.model_catalog().provider_may_have_changed()
+                    || (self.chat_widget.model_catalog().provider_may_have_changed() && !crate::app::provider::uses_provider_owned_catalog(self.chat_widget.config_ref()))
                 {
                     return Ok(AppRunControl::Continue);
                 }
@@ -2598,7 +2598,8 @@ impl App {
             }
             AppEvent::FetchModels { request_id } => {
                 if self.chat_widget.model_popup_request_is_current(request_id) {
-                    app_server.fetch_models(request_id, self.app_event_tx.clone());
+                    let provider=(crate::app::provider::uses_provider_owned_catalog(self.chat_widget.config_ref())).then(|| self.chat_widget.config_ref().model_provider_id.clone());
+                    app_server.fetch_models_for_provider(request_id, self.app_event_tx.clone(), provider);
                 }
             }
             AppEvent::ModelsLoaded { request_id, result: Ok(models) }

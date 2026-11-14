@@ -741,6 +741,7 @@ impl ModelProvider for ConfiguredModelProvider {
         let auth_manager = self.auth_manager.clone();
         let manager = OpenAiModelsManager::with_settings(settings, endpoint, auth_manager);
         match &self.info.model_catalog_url {
+            _ if self.info.uses_public_models_api() => Arc::new(manager.with_provider_catalog()),
             Some(_) => Arc::new(manager.with_provider_catalog()),
             None => Arc::new(manager),
         }

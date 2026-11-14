@@ -18,6 +18,8 @@ use std::collections::BTreeSet;
 
 #[derive(Clone, Default)]
 pub(crate) struct Draft {
+    pub(super) preset:
+        Option<&'static codex_model_provider_info::compatible_presets::CompatibleProviderPreset>,
     pub(super) provider: Option<ModelProviderSummary>,
     pub(super) changes: BTreeMap<Field, String>,
     pub(super) variables: BTreeSet<String>,
@@ -42,11 +44,35 @@ impl Draft {
         }
     }
 
+    pub(crate) fn from_preset(index: usize, catalog: &[ModelProviderSummary]) -> Self {
+        let preset =
+            &codex_model_provider_info::compatible_presets::COMPATIBLE_PROVIDER_PRESETS[index];
+        let mut draft = Self::new(None, catalog);
+        draft.preset = Some(preset);
+        draft.changes.insert(Field::Name, preset.name.into());
+        draft.changes.insert(Field::Url, preset.base_url.into());
+        draft.changes.insert(Field::Wire, "chat".into());
+        draft
+    }
+
     pub(super) fn fields(&self) -> Vec<(Field, Option<&str>)> {
         let Some(p) = &self.provider else {
-            return [Field::Name, Field::Url, Field::Variable]
-                .map(|field| (field, None))
-                .into();
+            if let Some(preset) = self.preset {
+                return if preset.api_key_required {
+                    vec![(Field::ApiKey, None)]
+                } else {
+                    vec![(Field::Url, Some(preset.base_url))]
+                };
+            }
+            return [
+                Field::Name,
+                Field::Url,
+                Field::ApiKey,
+                Field::Variable,
+                Field::Wire,
+            ]
+            .map(|field| (field, None))
+            .into();
         };
         provider_fields(p)
             .into_iter()
@@ -66,7 +92,8 @@ impl Draft {
     }
 
     pub(super) fn required(&self, field: Field) -> bool {
-        field == Field::Name
+        (field == Field::ApiKey && self.preset.is_some_and(|p| p.api_key_required))
+            || field == Field::Name
             || (field == Field::Url && self.provider.as_ref().is_none_or(|p| p.base_url.is_some()))
     }
 
@@ -76,6 +103,9 @@ impl Draft {
         }
         for (field, original) in self.fields() {
             if self.required(field) && self.value(field, original).trim().is_empty() {
+                if field == Field::ApiKey {
+                    return Err("Enter an API key for this provider.");
+                }
                 return Err(if field == Field::Name {
                     "Enter a provider name."
                 } else {
@@ -96,18 +126,51 @@ impl Draft {
                 return Err("Enter an environment variable name such as TEAM_API_KEY.");
             }
         }
+        if self
+            .changes
+            .get(&Field::ApiKey)
+            .is_some_and(|s| !s.is_empty())
+            && self
+                .changes
+                .get(&Field::Variable)
+                .is_some_and(|s| !s.is_empty())
+        {
+            return Err("Enter an API key or its environment variable, not both.");
+        }
         let changed = |field| {
             self.changes
                 .get(&field)
                 .map(|s| (!s.is_empty()).then(|| s.clone()))
         };
+        if let Some(wire) = self.changes.get(&Field::Wire).filter(|s| !s.is_empty()) {
+            if !matches!(wire.as_str(), "chat" | "responses") {
+                return Err("API protocol must be chat or responses.");
+            }
+        }
         let provider = self.provider.as_ref();
         let settings = match provider.map(|p| &p.settings) {
             None | Some(ProviderSettings::CustomGateway { .. }) => {
                 ProviderSettingsPatch::CustomGateway(CustomGatewaySettingsParams {
+                    api_key: self
+                        .changes
+                        .get(&Field::ApiKey)
+                        .filter(|s| !s.is_empty())
+                        .cloned(),
+                    wire_api: if provider.is_none() {
+                        Some(
+                            self.changes
+                                .get(&Field::Wire)
+                                .filter(|s| !s.is_empty())
+                                .cloned()
+                                .unwrap_or_else(|| "chat".into()),
+                        )
+                    } else {
+                        None
+                    },
                     provider_id: provider.map(|p| p.id.clone()),
                     name: self.changes.get(&Field::Name).cloned(),
-                    base_url: changed(Field::Url),
+                    base_url: changed(Field::Url)
+                        .or_else(|| self.preset.map(|p| Some(p.base_url.into()))),
                     env_key: changed(Field::Variable),
                 })
             }

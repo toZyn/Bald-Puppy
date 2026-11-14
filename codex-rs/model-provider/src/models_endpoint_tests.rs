@@ -629,3 +629,39 @@ async fn explicit_catalog_rejects_redirects_without_forwarding_provider_credenti
     assert!(!format!("{error:?}").contains("catalog-secret"));
     assert_eq!(destination.received_requests().await.unwrap().len(), 0);
 }
+
+#[tokio::test]
+async fn compatible_public_catalog_uses_provider_key_without_codex_query() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .and(header("authorization", "Bearer provider-key"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(
+            serde_json::json!({"data":[{"id":"local/coder","context_length":16384}]}),
+        ))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let endpoint = OpenAiModelsEndpoint::new(
+        ModelProviderInfo {
+            name: "Compatible".into(),
+            base_url: Some(format!("{}/v1", server.uri())),
+            wire_api: codex_model_provider_info::WireApi::Chat,
+            experimental_bearer_token: Some("provider-key".into()),
+            ..Default::default()
+        },
+        None,
+        None,
+    );
+    let response = endpoint
+        .list_models(
+            "version-is-not-sent",
+            HttpClientFactory::new(OutboundProxyPolicy::ReqwestDefault),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.models[0].slug, "local/coder");
+    assert_eq!(response.models[0].context_window, Some(16384));
+    let requests = server.received_requests().await.unwrap();
+    assert!(requests[0].url.query().is_none());
+}

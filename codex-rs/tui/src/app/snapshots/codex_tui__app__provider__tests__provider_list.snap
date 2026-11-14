@@ -1,13 +1,19 @@
 ---
 source: tui/src/app/provider_tests.rs
-expression: "render_bottom_popup(&chat, 80)"
+expression: "render_bottom_popup(&app.chat_widget, 80)"
 ---
   Model providers
   Current chat: ollama · Default for new chats: lmstudio
 
 
-› 1. ○ OpenAI                             openai
-  2. Create a custom provider or gateway
-
+› 1. ○ OpenAI              openai
+  2. Connect OpenAI API    https://api.openai.com/v1
+  3. Connect OpenRouter    https://openrouter.ai/api/v1
+  4. Connect Groq          https://api.groq.com/openai/v1
+  5. Connect DeepSeek      https://api.deepseek.com
+  6. Connect Together AI   https://api.together.ai/v1
+  7. Connect Fireworks AI  https://api.fireworks.ai/inference/v1
+  8. Connect Cerebras      https://api.cerebras.ai/v1
+↓
   Use /new to start a chat with the selected provider.
   enter details · space set default · esc back

@@ -230,7 +230,8 @@ async fn space_saves_once_retries_and_preserves_the_current_chat() -> Result<()>
         &server,
         next_provider_event(&mut events).await,
     );
-    assert!(app.chat_widget.model_picker_unavailable().is_some());
+    // Custom providers can refresh their scoped catalog without restarting the TUI.
+    assert!(app.chat_widget.model_picker_unavailable().is_none());
     handle(
         &mut app,
         &mut tui,
@@ -252,9 +253,9 @@ async fn space_saves_once_retries_and_preserves_the_current_chat() -> Result<()>
         render_bottom_popup(&app.chat_widget, /*width*/ 100)
     );
 
-    // Switch back, then dismiss the picker before the save result is delivered.
-    app.chat_widget.handle_key_event(KeyCode::End.into());
-    app.chat_widget.handle_key_event(KeyCode::Up.into());
+    // Switch back to the second connected provider; templates follow connected entries.
+    app.chat_widget.handle_key_event(KeyCode::Home.into());
+    app.chat_widget.handle_key_event(KeyCode::Down.into());
     app.chat_widget.handle_key_event(KeyCode::Char(' ').into());
     handle(
         &mut app,
@@ -397,7 +398,7 @@ async fn list_opened_before_first_attachment_shows_the_attached_provider() -> Re
 }
 
 #[tokio::test]
-async fn adding_a_custom_provider_saves_to_the_server_and_preserves_the_default() -> Result<()> {
+async fn adding_a_custom_provider_saves_and_selects_it_on_the_server() -> Result<()> {
     let (mut app, mut events, _ops) = make_test_app_with_channels().await;
     let mut tui = make_test_tui()?;
     std::fs::write(
@@ -414,9 +415,9 @@ async fn adding_a_custom_provider_saves_to_the_server_and_preserves_the_default(
         &server,
         next_provider_event(&mut events).await,
     );
-    // Open the existing gateway's scrollable details and enter its editor.
-    app.chat_widget.handle_key_event(KeyCode::End.into());
-    app.chat_widget.handle_key_event(KeyCode::Up.into());
+    // Open the second connected provider; connection templates follow it.
+    app.chat_widget.handle_key_event(KeyCode::Home.into());
+    app.chat_widget.handle_key_event(KeyCode::Down.into());
     app.chat_widget.handle_key_event(KeyCode::Enter.into());
     handle(
         &mut app,
@@ -456,20 +457,24 @@ async fn adding_a_custom_provider_saves_to_the_server_and_preserves_the_default(
 
     › Name*  Team gateway
       Base URL*  https://gateway.example/v1
-      API key variable  $TEAM_API_KEY
+      API key  Paste API key
+      API key variable  $TEAM_API_KEY (optional)
+      API protocol  chat
       Save
 
     * Required
-    Enter the environment variable name on the app server.
+    Use an API key or an environment variable on the app server.
     tab move · enter next/save · esc back
     ");
     for value in ["Team gateway", "https://gateway.example.test/v1"] {
         chat.handle_paste(value.into());
         chat.handle_key_event(KeyCode::Enter.into());
     }
+    chat.handle_key_event(KeyCode::Tab.into());
     chat.handle_paste("CAT".into());
     chat.handle_key_event(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::CONTROL));
     assert!(render_bottom_popup(chat, /*width*/ 19).contains("$CATALOG_KEY"));
+    chat.handle_key_event(KeyCode::Tab.into());
     chat.handle_key_event(KeyCode::Tab.into());
     chat.handle_key_event(KeyCode::Enter.into());
     // Process the write, its completion, and the subsequent catalog reload.
@@ -483,7 +488,98 @@ async fn adding_a_custom_provider_saves_to_the_server_and_preserves_the_default(
     }
     let list = render_bottom_popup(&app.chat_widget, /*width*/ 100);
     assert!(list.contains("Team gateway"));
-    assert!(list.contains("Default for new chats: openai"));
+    assert!(list.contains("Default for new chats: team-gateway"));
     server.shutdown().await?;
     Ok(())
+}
+
+#[tokio::test]
+async fn connecting_invalidates_models_only_after_confirmed_or_ambiguous_selection() {
+    use codex_app_server_client::AppServerClient;
+    use codex_app_server_client::CloudClient;
+    use codex_app_server_protocol::CustomGatewaySettingsParams;
+    use codex_app_server_protocol::JSONRPCErrorError;
+    use codex_app_server_protocol::ModelProviderConfigWriteParams;
+    use codex_app_server_protocol::ProviderSettingsPatch;
+    for (status, ambiguous, changed) in [
+        ("ok", false, true),
+        ("okOverridden", false, false),
+        ("rejected", false, false),
+        ("", true, true),
+    ] {
+        let (mut app, mut events, _ops) = make_test_app_with_channels().await;
+        let (client, mut commands, _server_events) = CloudClient::channel(1);
+        let backend = BackendId::new();
+        let server = AppServerSession::new(
+            backend,
+            AppServerClient::Cloud(client),
+            crate::app_server_session::ThreadParamsMode::Remote,
+        );
+        app.chat_widget.show_selection_view(SelectionViewParams {
+            view_id: Some(editor::VIEW_ID),
+            items: vec![back()],
+            ..Default::default()
+        });
+        let params = ModelProviderConfigWriteParams {
+            settings: ProviderSettingsPatch::CustomGateway(CustomGatewaySettingsParams {
+                name: Some("OpenRouter".into()),
+                base_url: Some(Some("https://openrouter.ai/api/v1".into())),
+                wire_api: Some("chat".into()),
+                api_key: Some("synthetic-key".into()),
+                ..Default::default()
+            }),
+        };
+        write::Write::Settings(Box::new((Draft::from_preset(1, &[]), params)))
+            .start(&mut app, &server);
+        let command = commands.recv().await.unwrap();
+        let saved = codex_app_server_protocol::ModelProviderConfigWriteResponse {
+            provider: ModelProviderSummary {
+                id: "openrouter".into(),
+                name: "OpenRouter".into(),
+                can_edit: true,
+                base_url: Some("https://openrouter.ai/api/v1".into()),
+                settings: ProviderSettings::CustomGateway {
+                    auth: codex_app_server_protocol::GatewayAuth::ExternallyConfigured {
+                        env_key: None,
+                    },
+                },
+            },
+        };
+        command
+            .response
+            .send(Ok(Ok(serde_json::to_value(saved).unwrap())))
+            .unwrap();
+        let selection = commands.recv().await.unwrap();
+        let reply = if ambiguous {
+            Err(std::io::Error::other("connection lost"))
+        } else if status == "rejected" {
+            Ok(Err(JSONRPCErrorError {
+                code: -32602,
+                message: "Managed default".into(),
+                data: None,
+            }))
+        } else {
+            Ok(Ok(
+                serde_json::json!({"status":status,"version":"1","filePath":std::env::temp_dir().join("config.toml")}),
+            ))
+        };
+        selection.response.send(reply).unwrap();
+        assert!(matches!(
+            next_provider_event(&mut events).await,
+            Event::Written(_)
+        ));
+        assert_eq!(app.model_catalog.provider_may_have_changed(), changed);
+    }
+}
+
+#[tokio::test]
+async fn remote_custom_provider_ids_use_their_own_catalog_before_metadata_refresh() {
+    let (app, _, _) = make_test_app_with_channels().await;
+    let mut config = app.config.clone();
+    config.model_provider =
+        codex_model_provider_info::ModelProviderInfo::create_openai_provider(None);
+    config.model_provider_id = "private-provider".into();
+    assert!(uses_provider_owned_catalog(&config));
+    config.model_provider_id = "openai".into();
+    assert!(!uses_provider_owned_catalog(&config));
 }

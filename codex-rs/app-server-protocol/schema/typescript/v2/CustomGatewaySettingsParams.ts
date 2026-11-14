@@ -4,6 +4,14 @@
 
 export type CustomGatewaySettingsParams = {
 /**
+ * OpenAI wire protocol. Omit to retain the existing value (new gateways default to Responses).
+ */
+wireApi?: string,
+/**
+ * Write-only bearer credential. Never returned in provider summaries.
+ */
+apiKey?: string,
+/**
  * Omit or pass null to allocate a new custom provider ID.
  */
 providerId?: string | null, name?: string, baseUrl?: string | null, envKey?: string | null, };

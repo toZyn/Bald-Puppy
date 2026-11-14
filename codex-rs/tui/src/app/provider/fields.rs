@@ -7,6 +7,8 @@ use codex_app_server_protocol::ProviderSettings;
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(super) enum Field {
     Name,
+    ApiKey,
+    Wire,
     Url,
     ManagedUrl,
     Variable,
@@ -21,6 +23,8 @@ pub(super) enum Field {
 impl Field {
     pub(super) fn label(self) -> &'static str {
         match self {
+            Self::ApiKey => "API key",
+            Self::Wire => "API protocol",
             Self::Name => "Name",
             Self::Url | Self::ManagedUrl => "Base URL",
             Self::Variable => "API key variable",
