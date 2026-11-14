@@ -65,7 +65,7 @@ def changelog_section(changelog: str, version: str) -> str:
     raise ValueError(f"CHANGELOG.md needs a nonempty '## {version}' section")
 
 
-def prepare(tag: str, *, root: Path = ROOT) -> dict:
+def prepare(tag: str, *, allow_untagged: bool = False, root: Path = ROOT) -> dict:
     # Parse before using the tag as a git ref, filename, or workflow output.
     if not tag.startswith("v"):
         raise ValueError("Release tags must start with v, for example v0.1.0")
@@ -73,10 +73,17 @@ def prepare(tag: str, *, root: Path = ROOT) -> dict:
     if (root / "VERSION").read_text().strip() != version:
         raise ValueError("The tag version must match VERSION")
     section = changelog_section((root / "CHANGELOG.md").read_text(), version)
-    commit = run(
-        "git", "rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}", cwd=root
-    )
-    if commit != run("git", "rev-parse", "HEAD", cwd=root):
+    head = run("git", "rev-parse", "HEAD", cwd=root)
+    exists = subprocess.run(
+        ["git", "show-ref", "--verify", "--quiet", f"refs/tags/{tag}"], cwd=root
+    ).returncode
+    if exists == 1 and allow_untagged:
+        commit = head
+    else:
+        commit = run(
+            "git", "rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}", cwd=root
+        )
+    if commit != head:
         raise ValueError("Checkout must be the exact tagged commit")
     metadata = {
         "tag": tag,
@@ -340,10 +347,31 @@ def verify_upload(assets_file: Path, *, root: Path = ROOT) -> None:
             raise ValueError(f"Uploaded checksum mismatch: {asset['name']}")
 
 
+def verify_remote_tag(tag: str, commit: str, *, root: Path = ROOT) -> None:
+    version_value(tag.removeprefix("v"))
+    refs = run(
+        "git",
+        "ls-remote",
+        "--tags",
+        "origin",
+        f"refs/tags/{tag}",
+        f"refs/tags/{tag}^{{}}",
+        cwd=root,
+    )
+    resolved = dict(line.split()[::-1] for line in refs.splitlines())
+    target = resolved.get(f"refs/tags/{tag}^{{}}", resolved.get(f"refs/tags/{tag}"))
+    if target is not None and target != commit:
+        raise ValueError(
+            "The remote version tag points to a different commit; publish a new version"
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("prepare").add_argument("--tag", required=True)
+    preparation = sub.add_parser("prepare")
+    preparation.add_argument("--tag", required=True)
+    preparation.add_argument("--allow-untagged", action="store_true")
     builder = sub.add_parser("build")
     builder.add_argument("--target", choices=TARGETS, required=True)
     builder.add_argument("--version", type=version_value, required=True)
@@ -351,13 +379,18 @@ def main() -> None:
     collector.add_argument("--version", type=version_value, required=True)
     collector.add_argument("--commit", required=True)
     sub.add_parser("verify-upload").add_argument("--assets", type=Path, required=True)
+    tag_check = sub.add_parser("verify-tag")
+    tag_check.add_argument("--tag", required=True)
+    tag_check.add_argument("--commit", required=True)
     args = parser.parse_args()
     if args.command == "prepare":
-        prepare(args.tag)
+        prepare(args.tag, allow_untagged=args.allow_untagged)
     elif args.command == "build":
         build(args.target, args.version)
     elif args.command == "collect":
         collect(args.version, args.commit)
+    elif args.command == "verify-tag":
+        verify_remote_tag(args.tag, args.commit)
     else:
         verify_upload(args.assets)
 

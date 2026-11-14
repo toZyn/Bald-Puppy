@@ -3,18 +3,20 @@ name: Bald Puppy release
 on:
   push:
     tags: ["v*"]
+    branches: [main]
+    paths: [VERSION, .github/workflows/bald-puppy-release.yml]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing version tag, e.g. v0.1.0 (must match VERSION)"
-        required: true
+        description: "Existing version tag; leave empty to release the selected branch VERSION"
+        required: false
         type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: bald-puppy-release-${{ inputs.tag || github.ref_name }}
+  group: bald-puppy-release
   cancel-in-progress: false
 
 env:
@@ -44,10 +46,11 @@ jobs:
       - name: Validate tag, version, changelog, and release tests
         id: release
         env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ inputs.tag || (github.ref_type == 'tag' && github.ref_name) || '' }}
         run: |
           python3 -m unittest discover -s scripts/release -p 'test_*.py'
-          python3 scripts/release/release.py prepare --tag "$RELEASE_TAG"
+          if [[ -z "$RELEASE_TAG" ]]; then RELEASE_TAG="v$(cat VERSION)"; fi
+          python3 scripts/release/release.py prepare --tag "$RELEASE_TAG" --allow-untagged
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: release-metadata
@@ -170,11 +173,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/release/release.py verify-tag --tag "$RELEASE_TAG" --commit "$RELEASE_COMMIT"
           # An interrupted draft is resumable; published assets are never overwritten.
           if gh release view "$RELEASE_TAG" --json isDraft > existing-release.json 2>/dev/null; then
             python3 -c 'import json; assert json.load(open("existing-release.json"))["isDraft"], "Release is already published; use a new version"'
           else
-            args=(--verify-tag --draft --title "Bald Puppy $RELEASE_VERSION" --notes-file release-metadata/notes.md)
+            args=(--target "$RELEASE_COMMIT" --draft --title "Bald Puppy $RELEASE_VERSION" --notes-file release-metadata/notes.md)
             if [[ "$IS_PRERELEASE" == true ]]; then args+=(--prerelease); fi
             gh release create "$RELEASE_TAG" "${args[@]}"
           fi

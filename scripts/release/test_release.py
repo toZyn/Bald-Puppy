@@ -136,6 +136,9 @@ class ReleaseTests(unittest.TestCase):
             "-qm",
             "release",
         )
+        # Branch-triggered builds may propose an unpublished version without making a tag yet.
+        info = release.prepare("v" + VERSION, allow_untagged=True, root=self.root)
+        self.assertEqual(info["version"], VERSION)
         git("tag", "v" + VERSION)
         output = self.root / "outputs"
         with patch.dict(os.environ, {"GITHUB_OUTPUT": str(output)}):
@@ -210,6 +213,22 @@ class ReleaseTests(unittest.TestCase):
         self.metadata()
         with self.assertRaisesRegex(ValueError, "does not match"):
             release.collect(VERSION, "b" * 40, root=self.root)
+
+    def test_remote_tag_rejects_different_commit_but_accepts_missing_or_peeled_tag(
+        self,
+    ):
+        for refs in (
+            "",
+            f"{COMMIT}\trefs/tags/v{VERSION}",
+            f"{'b' * 40}\trefs/tags/v{VERSION}\n{COMMIT}\trefs/tags/v{VERSION}^{{}}",
+        ):
+            with patch("release.run", return_value=refs):
+                release.verify_remote_tag("v" + VERSION, COMMIT)
+        with (
+            patch("release.run", return_value=f"{'b' * 40}\trefs/tags/v{VERSION}"),
+            self.assertRaisesRegex(ValueError, "different commit"),
+        ):
+            release.verify_remote_tag("v" + VERSION, COMMIT)
 
     def test_upload_gate_rejects_partial_or_corrupted_upload(self):
         dist = self.root / "dist"

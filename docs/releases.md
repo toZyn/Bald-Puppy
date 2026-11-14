@@ -1,12 +1,12 @@
 # Releases de Bald Puppy
 
-El workflow **Bald Puppy release** compila el proyecto y publica un GitHub Release al subir un tag `v<versión>`. Usa runners públicos de GitHub, sin servidores privados, certificados de firma ni tokens personales. Solo el trabajo final tiene permiso para escribir el release.
+El workflow **Bald Puppy release** compila el proyecto y publica un GitHub Release al integrar un cambio de `VERSION` en `main`, al modificar el propio workflow o al subir un tag `v<versión>`. Usa runners públicos de GitHub, sin servidores privados, certificados de firma ni tokens personales. Solo el trabajo final tiene permiso para escribir el release.
 
 ## Publicar una versión
 
 1. Actualiza `VERSION` con una versión SemVer, por ejemplo `0.1.1`.
 2. Añade una sección `## 0.1.1 - AAAA-MM-DD` en `CHANGELOG.md` y escribe los cambios de esa versión. `Unreleased` no se publica como changelog de una versión.
-3. Integra el commit en `main` y crea el tag sobre ese commit:
+3. Integra el commit en `main`: el workflow compila esa revisión y crea el tag junto al borrador del release cuando todos los binarios están listos. También puedes iniciarlo con un tag explícito:
 
 ```bash
 git switch main
@@ -15,9 +15,9 @@ git tag -a v0.1.1 -m "Bald Puppy 0.1.1"
 git push origin v0.1.1
 ```
 
-Para la primera publicación, el repositorio queda preparado con `VERSION=0.1.0` y su sección en el changelog. Tras integrar el workflow, crea y sube `v0.1.0` sobre ese commit.
+Para la primera publicación, el repositorio queda preparado con `VERSION=0.1.0` y su sección en el changelog. La integración o actualización del workflow inicia esa primera publicación.
 
-También puedes ejecutar **Actions → Bald Puppy release → Run workflow**, indicando un tag que ya exista. No crea tags ni inventa números de versión. El tag, `VERSION`, el changelog y el commit de checkout deben coincidir. Los tags como `v0.2.0-rc.1` generan un _prerelease_.
+También puedes ejecutar **Actions → Bald Puppy release → Run workflow**, indicando un tag existente, o dejando el campo vacío para publicar el `VERSION` de la rama seleccionada. El tag se crea al publicar si todavía no existe. El tag, `VERSION`, el changelog y el commit de checkout deben coincidir. Los tags como `v0.2.0-rc.1` generan un _prerelease_.
 
 `VERSION` es la versión de distribución: se guarda en `codex-package.json` y se comprueba ejecutando `bin/codex --version` desde el paquete. El workflow sella también la versión del workspace en la copia de compilación del runner, para que el `--version` compilado coincida. Refresca las versiones internas del lockfile sin acceso a la red y comprueba que ninguna dependencia externa cambió. Los manifests originales del tag conservan sus versiones de desarrollo.
 
