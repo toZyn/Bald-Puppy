@@ -4,7 +4,7 @@ on:
   push:
     tags: ["v*"]
     branches: [main]
-    paths: [VERSION, .github/workflows/bald-puppy-release.yml]
+    paths: [VERSION]
   workflow_dispatch:
     inputs:
       tag:
@@ -23,12 +23,14 @@ concurrency:
 env:
   CODEX_REPO_ROOT: ${{ github.workspace }}
   CARGO_NET_GIT_FETCH_WITH_CLI: "true"
-  CARGO_BUILD_JOBS: "1"
+  CARGO_BUILD_JOBS: "2"
   # Keep linking within the memory/disk budget of standard public runners.
   CARGO_PROFILE_RELEASE_DEBUG: "0"
   CARGO_PROFILE_RELEASE_LTO: "false"
   CARGO_PROFILE_RELEASE_STRIP: symbols
   CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
+  CARGO_PROFILE_RELEASE_OPT_LEVEL: "2"
 
 jobs:
   prepare:
@@ -63,7 +65,7 @@ jobs:
     needs: prepare
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 180
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
@@ -88,6 +90,7 @@ jobs:
       run:
         shell: bash
     env:
+      CARGO_BUILD_JOBS: ${{ matrix.runner == 'macos-15' && '1' || '2' }}
       TARGET: ${{ matrix.target }}
       RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
       STABLE_GIT_COMMIT: ${{ needs.prepare.outputs.commit }}
@@ -153,7 +156,7 @@ jobs:
   publish:
     needs: [prepare, build]
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 60
     permissions:
       contents: write
     env:

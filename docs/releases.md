@@ -1,6 +1,6 @@
 # Releases de Bald Puppy
 
-El workflow **Bald Puppy release** compila el proyecto y publica un GitHub Release al integrar un cambio de `VERSION` en `main`, al modificar el propio workflow o al subir un tag `v<versión>`. Usa runners públicos de GitHub, sin servidores privados, certificados de firma ni tokens personales. Solo el trabajo final tiene permiso para escribir el release.
+El workflow **Bald Puppy release** compila el proyecto y publica un GitHub Release al integrar un cambio de `VERSION` en `main` o al subir un tag `v<versión>`. Usa runners públicos de GitHub, sin servidores privados, certificados de firma ni tokens personales. Solo el trabajo final tiene permiso para escribir el release.
 
 ## Publicar una versión
 
@@ -15,7 +15,7 @@ git tag -a v0.1.1 -m "Bald Puppy 0.1.1"
 git push origin v0.1.1
 ```
 
-Para la primera publicación, el repositorio queda preparado con `VERSION=0.1.0` y su sección en el changelog. La integración o actualización del workflow inicia esa primera publicación.
+Para la primera publicación, el repositorio queda preparado con `VERSION=0.1.0` y su sección en el changelog. El workflow puede iniciarse manualmente para esa primera publicación; después se inicia al cambiar VERSION en main o al subir un tag.
 
 También puedes ejecutar **Actions → Bald Puppy release → Run workflow**, indicando un tag existente, o dejando el campo vacío para publicar el `VERSION` de la rama seleccionada. El tag se crea al publicar si todavía no existe. El tag, `VERSION`, el changelog y el commit de checkout deben coincidir. Los tags como `v0.2.0-rc.1` generan un _prerelease_.
 
@@ -81,3 +81,9 @@ python3 -m unittest discover -s scripts/release -p 'test_*.py'
 ```
 
 El workflow heredado `rust-release.yml` sigue usando los tags `rust-v*` y su infraestructura upstream. Para Bald Puppy usa exclusivamente los tags `v*` descritos aquí.
+
+## Recuperar una publicación incompleta
+
+El workflow **Bald Puppy release recovery** permite indicar el ID de una ejecución de release anterior. Conserva los artefactos terminados y recompila solo los targets que faltan, desde el mismo commit original. Luego valida el conjunto completo y publica la misma versión. Los artefactos originales deben seguir disponibles. Una versión pública nunca se sobrescribe.
+
+La configuración de compilación de CI usa optimización O2, 16 unidades de codegen y hasta dos tareas Cargo en los runners con memoria suficiente; Apple Silicon conserva una tarea. El límite de compilación es de seis horas por target. Las recuperaciones registran los runs y el perfil usado en RELEASE.json.
