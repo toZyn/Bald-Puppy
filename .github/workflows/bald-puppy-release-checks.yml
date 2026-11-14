@@ -1,0 +1,37 @@
+name: Bald Puppy release checks
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/bald-puppy-release*.yml"
+      - "scripts/release/**"
+      - "scripts/codex_package/**"
+      - "VERSION"
+      - "CHANGELOG.md"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/bald-puppy-release*.yml"
+      - "scripts/release/**"
+      - "VERSION"
+      - "CHANGELOG.md"
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Test release validation and packaging gates
+        run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
+      - name: Validate source version and changelog
+        run: |
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'scripts/release')
+          import release
+          version = release.version_value(Path('VERSION').read_text().strip())
+          release.changelog_section(Path('CHANGELOG.md').read_text(), version)
+          PY

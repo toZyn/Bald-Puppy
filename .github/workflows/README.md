@@ -53,3 +53,9 @@ packaging jobs. Cargo artifacts remain the default.
 
 Once public Bazel CI passes, require the `Bazel result` check in the main
 branch ruleset. It reports the result of the full Bazel workflow.
+
+## Bald Puppy releases
+
+`bald-puppy-release.yml` handles this fork's `v*` tags using standard GitHub-hosted runners. It builds eight native targets, packages the required helpers, validates the complete asset set, and publishes the version-specific changelog with SHA-256 checksums. See [release instructions](../../docs/releases.md). The upstream `rust-v*` workflows are separate.
+
+`bald-puppy-release-checks.yml` tests tag/changelog validation, archive integrity checks, and the publication gate on relevant pull requests and main pushes.

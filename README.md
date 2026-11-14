@@ -15,7 +15,7 @@ cargo build --bin codex
 cargo run --bin codex -- "explain this codebase to me"
 ```
 
-See [installation and development setup](docs/install.md) for prerequisites, helper tools, and testing commands. Upstream installers and the `@openai/codex` npm package install OpenAI's distribution; build this repository to use its code.
+See [installation and development setup](docs/install.md) for prerequisites, helper tools, and testing commands. Download Bald Puppy binaries from this repository's [releases](https://github.com/toZyn/Bald-Puppy/releases), or build this repository to use its code. Upstream installers and the `@openai/codex` npm package install OpenAI's distribution.
 
 ## Repository structure
 
@@ -37,6 +37,7 @@ The root `justfile` provides development commands. Cargo and Bazel configuration
 
 - [Getting started](docs/getting-started.md)
 - [Installing and building](docs/install.md)
+- [Native binaries and automatic releases](docs/releases.md)
 - [Connect providers and choose models](docs/providers.md)
 - [Configuration](docs/config.md)
 - [Authentication](docs/authentication.md)
