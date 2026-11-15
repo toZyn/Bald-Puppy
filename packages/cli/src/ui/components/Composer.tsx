@@ -159,12 +159,11 @@ export const Composer = ({ footerRef }: ComposerProps) => {
           isEmbeddedShellFocused={uiState.embeddedShellFocused}
           placeholder={
             vimEnabled
-              ? '  ' + t("Press 'i' for INSERT mode and 'Esc' for NORMAL mode.")
-              : '  ' +
-                t(
+              ? t("Press 'i' for INSERT mode and 'Esc' for NORMAL mode.")
+              : t(
                   subscriptionActive
                     ? 'Type your request, or /usage'
-                    : 'Type your message or @path/to/file',
+                    : 'Type a message...',
                 )
           }
           promptSuggestion={uiState.promptSuggestion}

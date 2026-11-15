@@ -19,7 +19,7 @@ import {
 import { t } from '../../../i18n/index.js';
 import { createDebugLogger } from '@qwen-code/qwen-code-core/utils/debugLogger.js';
 import { ErrorBoundary } from '../shared/ErrorBoundary.js';
-import { ICON } from '../../constants.js';
+import { TERMINAL_APP_NAME } from '../../terminal-brand.js';
 import { sanitizeTerminalText } from '../../utils/textUtils.js';
 import { formatDuration } from '../../utils/displayUtils.js';
 import type { InlineImageData } from '../../types.js';
@@ -28,8 +28,8 @@ import { formatInlineImageOverflow } from '../../utils/inline-image-parts.js';
 
 const debugLogger = createDebugLogger('THINK_RENDER');
 
-export const THINKING_ICON = `${ICON.THEREFORE} `;
-export const THINKING_ICON_PENDING = `${ICON.BECAUSE} `;
+export const THINKING_ICON = '◐ ';
+export const THINKING_ICON_PENDING = '◐ ';
 
 export const toggleKeyHint = 'ctrl+o';
 
@@ -118,7 +118,6 @@ interface ContinuationMarkdownMessageProps {
   isPending: boolean;
   availableTerminalHeight?: number;
   contentWidth: number;
-  basePrefix: string;
   textColor?: string;
   sourceCopyIndexOffsets?: MarkdownSourceCopyIndexOffsets;
   sourceCopyText?: string;
@@ -175,32 +174,60 @@ const PrefixedMarkdownMessage: React.FC<PrefixedMarkdownMessageProps> = ({
   sourceCopyIndexOffsets,
   sourceCopyText,
 }) => {
-  const prefixWidth = getPrefixWidth(prefix);
+  if (
+    isPending &&
+    availableTerminalHeight !== undefined &&
+    availableTerminalHeight <= 0
+  )
+    return null;
+  const prefixWidth = 3;
+  const showHeading =
+    availableTerminalHeight === undefined || availableTerminalHeight >= 2;
+  const showCursor =
+    isPending &&
+    (availableTerminalHeight === undefined || availableTerminalHeight >= 3);
+  const bodyHeightBudget =
+    availableTerminalHeight === undefined
+      ? undefined
+      : Math.max(
+          1,
+          availableTerminalHeight - Number(showHeading) - Number(showCursor),
+        );
   const imageHeightBudget =
-    availableTerminalHeight !== undefined && images?.length
+    bodyHeightBudget !== undefined && images?.length
       ? Math.max(
           1,
           Math.floor(
-            availableTerminalHeight /
-              (images.length + (text.length > 0 ? 1 : 0)),
+            bodyHeightBudget / (images.length + (text.length > 0 ? 1 : 0)),
           ),
         )
-      : availableTerminalHeight;
+      : bodyHeightBudget;
 
   return (
-    <Box flexDirection="row">
-      <Box width={prefixWidth} flexShrink={0}>
-        <Text color={prefixColor} aria-label={ariaLabel}>
-          {prefix}
+    <Box flexDirection="column" paddingLeft={1}>
+      {showHeading && (
+        <Text aria-label={ariaLabel} wrap="truncate-end">
+          <Text color={prefixColor} bold>
+            {prefix}
+          </Text>
+          <Text color={theme.text.secondary} bold>
+            {' '}
+            {TERMINAL_APP_NAME}
+          </Text>
         </Text>
-      </Box>
-      <Box flexGrow={1} flexDirection="column">
+      )}
+      <Box
+        paddingLeft={2}
+        flexDirection="column"
+        maxHeight={isPending ? bodyHeightBudget : undefined}
+        overflow="hidden"
+      >
         {text.length > 0 && (
           <MarkdownDisplay
             text={text}
             isPending={isPending}
-            availableTerminalHeight={availableTerminalHeight}
-            contentWidth={contentWidth - prefixWidth}
+            availableTerminalHeight={bodyHeightBudget}
+            contentWidth={Math.max(1, contentWidth - prefixWidth)}
             textColor={textColor}
             sourceCopyIndexOffsets={sourceCopyIndexOffsets}
             sourceCopyText={sourceCopyText}
@@ -210,7 +237,7 @@ const PrefixedMarkdownMessage: React.FC<PrefixedMarkdownMessageProps> = ({
           <TerminalImage
             key={index}
             image={image}
-            contentWidth={contentWidth - prefixWidth}
+            contentWidth={Math.max(1, contentWidth - prefixWidth)}
             availableTerminalHeight={imageHeightBudget}
           />
         ))}
@@ -218,6 +245,11 @@ const PrefixedMarkdownMessage: React.FC<PrefixedMarkdownMessageProps> = ({
           <Text dimColor>{formatInlineImageOverflow(omittedImageCount)}</Text>
         )}
       </Box>
+      {showCursor && (
+        <Box paddingLeft={2}>
+          <Text color={theme.text.accent}>▎</Text>
+        </Box>
+      )}
     </Box>
   );
 };
@@ -231,12 +263,11 @@ const ContinuationMarkdownMessage: React.FC<
   isPending,
   availableTerminalHeight,
   contentWidth,
-  basePrefix,
   textColor,
   sourceCopyIndexOffsets,
   sourceCopyText,
 }) => {
-  const prefixWidth = getPrefixWidth(basePrefix);
+  const prefixWidth = 3;
   const imageHeightBudget =
     availableTerminalHeight !== undefined && images?.length
       ? Math.max(
@@ -255,7 +286,7 @@ const ContinuationMarkdownMessage: React.FC<
           text={text}
           isPending={isPending}
           availableTerminalHeight={availableTerminalHeight}
-          contentWidth={contentWidth - prefixWidth}
+          contentWidth={Math.max(1, contentWidth - prefixWidth)}
           textColor={textColor}
           sourceCopyIndexOffsets={sourceCopyIndexOffsets}
           sourceCopyText={sourceCopyText}
@@ -265,7 +296,7 @@ const ContinuationMarkdownMessage: React.FC<
         <TerminalImage
           key={index}
           image={image}
-          contentWidth={contentWidth - prefixWidth}
+          contentWidth={Math.max(1, contentWidth - prefixWidth)}
           availableTerminalHeight={imageHeightBudget}
         />
       ))}
@@ -277,17 +308,22 @@ const ContinuationMarkdownMessage: React.FC<
 };
 
 export const UserMessage: React.FC<UserMessageProps> = ({ text }) => (
-  // The TUI paints no background of its own; user messages render directly on
-  // the terminal background so they blend in across terminals and themes.
-  <PrefixedTextMessage
-    text={text}
-    prefix=">"
-    prefixColor={theme.text.accent}
-    textColor={theme.text.accent}
-    ariaLabel={SCREEN_READER_USER_PREFIX}
-    alignSelf="flex-start"
-    marginTop={1}
-  />
+  <Box flexDirection="column" paddingLeft={1} marginTop={1}>
+    <Text aria-label={SCREEN_READER_USER_PREFIX}>
+      <Text color={theme.text.accent} bold>
+        {'>'}
+      </Text>
+      <Text color={theme.text.secondary} bold>
+        {' '}
+        {t('You')}
+      </Text>
+    </Text>
+    <Box paddingLeft={2}>
+      <Text color={theme.text.primary} wrap="wrap">
+        {text}
+      </Text>
+    </Box>
+  </Box>
 );
 
 export const UserShellMessage: React.FC<UserShellMessageProps> = ({ text }) => {
@@ -317,7 +353,7 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = ({
     text={text}
     images={images}
     omittedImageCount={omittedImageCount}
-    prefix={ICON.DIAMOND}
+    prefix="◉"
     prefixColor={theme.text.accent}
     ariaLabel={SCREEN_READER_MODEL_PREFIX}
     isPending={isPending}
@@ -347,7 +383,6 @@ export const AssistantMessageContent: React.FC<
     isPending={isPending}
     availableTerminalHeight={availableTerminalHeight}
     contentWidth={contentWidth}
-    basePrefix={ICON.DIAMOND}
     sourceCopyIndexOffsets={sourceCopyIndexOffsets}
     sourceCopyText={sourceCopyText}
   />
@@ -414,10 +449,12 @@ export const ThinkMessage: React.FC<ThinkMessageProps> = ({
       ? t('(click or {{keyHint}} to expand)', { keyHint: toggleKeyHint })
       : t('({{keyHint}} to expand)', { keyHint: toggleKeyHint });
     return (
-      <Text dimColor italic>
-        {THINKING_ICON}
-        {label} {hint}
-      </Text>
+      <Box paddingLeft={1}>
+        <Text color={theme.text.secondary}>
+          {THINKING_ICON}
+          {label} {hint}
+        </Text>
+      </Box>
     );
   }
 
@@ -430,8 +467,8 @@ export const ThinkMessage: React.FC<ThinkMessageProps> = ({
       : '';
 
   return (
-    <Box flexDirection="column">
-      <Text dimColor italic>
+    <Box flexDirection="column" paddingLeft={1}>
+      <Text color={theme.text.secondary}>
         {isPending ? THINKING_ICON_PENDING : THINKING_ICON}
         {label}
         {collapseHint}
@@ -441,7 +478,7 @@ export const ThinkMessage: React.FC<ThinkMessageProps> = ({
         isPending={isPending}
         expanded={expanded}
         availableTerminalHeight={availableTerminalHeight}
-        contentWidth={contentWidth}
+        contentWidth={Math.max(1, contentWidth - 1)}
       />
     </Box>
   );
@@ -454,11 +491,13 @@ export const ThinkMessageContent: React.FC<ThinkMessageContentProps> = ({
   availableTerminalHeight,
   contentWidth,
 }) => (
-  <ThinkBody
-    text={text}
-    isPending={isPending}
-    expanded={expanded}
-    availableTerminalHeight={availableTerminalHeight}
-    contentWidth={contentWidth}
-  />
+  <Box paddingLeft={expanded ? 1 : 0}>
+    <ThinkBody
+      text={text}
+      isPending={isPending}
+      expanded={expanded}
+      availableTerminalHeight={availableTerminalHeight}
+      contentWidth={Math.max(1, contentWidth - 1)}
+    />
+  </Box>
 );

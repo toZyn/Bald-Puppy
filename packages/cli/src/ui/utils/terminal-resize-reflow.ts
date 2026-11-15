@@ -26,7 +26,7 @@ const CLEAR_TERMINAL = ansiEscapes.clearTerminal;
 // eslint-disable-next-line no-control-regex
 const CURSOR_DOWN_PATTERN = /\x1b\[(\d+)B/;
 
-// How long after a shrink every VP redraw starts from a clean viewport.
+// How long after geometry changes every VP redraw starts from a clean viewport.
 export const CLEAR_WINDOW_MS = 600;
 
 // The post-clear bare-write handoff (static append + live frame) happens
@@ -84,6 +84,7 @@ interface FrameModel {
   // packed lazily (the model is only consumed on shrink/wake).
   content: string;
   columns: number;
+  rows: number;
   // Ink counts the cursor-below line for non-fullscreen frames (the trailing
   // '\n' it appends); the amplification target must include it.
   trailingNewline: boolean;
@@ -178,9 +179,11 @@ export function installTerminalResizeReflow(
   }
   const isVP = options.virtualViewport ?? false;
   let lastWidth = stdout.columns ?? 0;
+  let lastHeight = stdout.rows ?? 0;
   const model: FrameModel = {
     content: '',
     columns: lastWidth,
+    rows: lastHeight,
     trailingNewline: false,
   };
   let pendingAmplify = 0;
@@ -196,10 +199,9 @@ export function installTerminalResizeReflow(
   // The handoff closes shortly after arming: the commit's bare writes land in
   // one synchronous render; later stray bare writes are ignored.
   let handoffUntil = 0;
-  // After a shrink, every redraw (not just Ink's clear) erases with a stale
-  // row count against the reflowed on-screen frame, re-stranding the frame
-  // top each time. For this window, start every VP redraw from a clean
-  // viewport instead.
+  // Keyboard height changes can reflow a previously width-wrapped frame.
+  // Every geometry change invalidates VP's relative erase coordinates, so
+  // redraw from a clean viewport until layout measurements settle.
   let clearUntil = 0;
   debugLogger.debug('installed', { width: lastWidth, isVP });
 
@@ -207,6 +209,7 @@ export function installTerminalResizeReflow(
     if (!bypassMin && content.split('\n').length < MIN_FRAME_LINES) return;
     model.content = content;
     model.columns = stdout.columns ?? lastWidth;
+    model.rows = stdout.rows ?? lastHeight;
     // Ink appends the cursor suffix AFTER the frame's trailing newline, so
     // detect the newline on the ANSI-stripped content (the suffix is either
     // pure control bytes or a one-cell cursor block, never a '\n').
@@ -215,6 +218,10 @@ export function installTerminalResizeReflow(
 
   const onResize = () => {
     const width = stdout.columns ?? lastWidth;
+    const height = stdout.rows ?? lastHeight;
+    if (isVP && (width !== lastWidth || height !== lastHeight)) {
+      clearUntil = Date.now() + CLEAR_WINDOW_MS;
+    }
     debugLogger.debug('resize-event', {
       width,
       lastWidth,
@@ -239,6 +246,7 @@ export function installTerminalResizeReflow(
       pendingAmplify = 0;
     }
     lastWidth = width;
+    lastHeight = height;
   };
   stdout.on('resize', onResize);
 
@@ -347,7 +355,9 @@ export function installTerminalResizeReflow(
       const columns = stdout.columns ?? lastWidth;
       originalWrite.call(
         stdout,
-        model.columns === columns && model.content
+        model.columns === columns &&
+          model.rows === (stdout.rows ?? lastHeight) &&
+          model.content
           ? CLEAR_VIEWPORT + model.content
           : CLEAR_VIEWPORT,
       );

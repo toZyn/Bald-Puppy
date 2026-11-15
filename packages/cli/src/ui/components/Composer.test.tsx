@@ -617,7 +617,7 @@ it.each<{ history: UIState['history'] }>([
       );
       expect(ui.lastFrame()).toContain('Footer');
       const props = vi.mocked(InputPrompt).mock.calls.at(-1)![0];
-      expect(props.placeholder).toBe('  Type your request, or /usage');
+      expect(props.placeholder).toBe('Type your request, or /usage');
       const options = { deferUntilIdle: true, submittedPrompt: '/usage' };
       props.onSubmit('/usage', options);
       expect(actions.handleFinalSubmit).toHaveBeenCalledWith('/usage', options);

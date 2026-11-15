@@ -198,7 +198,7 @@ describe('<ToolMessage />', () => {
       StreamingState.Idle,
     );
     const output = lastFrame();
-    expect(output).toContain('✓');
+    expect(output).toContain(' ⤳ ');
     expect(output).toContain('ReadFile');
     expect(output).not.toContain('MockMarkdown:Test result'); // collapsed
   });
@@ -436,7 +436,7 @@ describe('<ToolMessage />', () => {
       StreamingState.Idle,
     );
     const output = lastFrame();
-    expect(output).toContain('✓');
+    expect(output).toContain(' ⤳ ');
     expect(output).toContain('test-tool');
     expect(output).toContain('MockMarkdown:Test result'); // not collapsed
   });
@@ -481,7 +481,7 @@ describe('<ToolMessage />', () => {
       StreamingState.Idle,
     );
     const output = lastFrame();
-    expect(output).toContain('✓');
+    expect(output).toContain(' ⤳ ');
     expect(output).toContain('Grep');
     expect(output).not.toContain('MockMarkdown:Test result'); // result hidden
   });
@@ -702,28 +702,28 @@ describe('<ToolMessage />', () => {
   });
 
   describe('ToolStatusIndicator rendering', () => {
-    it('shows ✓ for Success status', () => {
+    it('shows the tool event arrow for Success status', () => {
       const { lastFrame } = renderWithContext(
         <ToolMessage {...baseProps} status={ToolCallStatus.Success} />,
         StreamingState.Idle,
       );
-      expect(lastFrame()).toContain('✓');
+      expect(lastFrame()).toContain(' ⤳ ');
     });
 
-    it('shows o for Pending status', () => {
+    it('shows the tool event arrow for Pending status', () => {
       const { lastFrame } = renderWithContext(
         <ToolMessage {...baseProps} status={ToolCallStatus.Pending} />,
         StreamingState.Idle,
       );
-      expect(lastFrame()).toContain('o');
+      expect(lastFrame()).toMatch(/^ ⤳ /);
     });
 
-    it('shows ? for Confirming status', () => {
+    it('shows the tool event arrow for Confirming status', () => {
       const { lastFrame } = renderWithContext(
         <ToolMessage {...baseProps} status={ToolCallStatus.Confirming} />,
         StreamingState.Idle,
       );
-      expect(lastFrame()).toContain('?');
+      expect(lastFrame()).toMatch(/^ ⤳ /);
     });
 
     it('hides a tool description repeated in a plain-text Hook confirmation', () => {
@@ -800,12 +800,12 @@ describe('<ToolMessage />', () => {
       expect(lastFrame()).toContain('destructive');
     });
 
-    it('shows - for Canceled status', () => {
+    it('shows a warning for Canceled status', () => {
       const { lastFrame } = renderWithContext(
         <ToolMessage {...baseProps} status={ToolCallStatus.Canceled} />,
         StreamingState.Idle,
       );
-      expect(lastFrame()).toContain('-');
+      expect(lastFrame()).toMatch(/^ ▲ /);
     });
 
     it('shows x for Error status', () => {
@@ -821,7 +821,7 @@ describe('<ToolMessage />', () => {
         <ToolMessage {...baseProps} status={ToolCallStatus.Executing} />,
         StreamingState.Idle,
       );
-      expect(lastFrame()).toContain('⊷');
+      expect(lastFrame()).toMatch(/^ ⤳ /);
       expect(lastFrame()).not.toContain('MockRespondingSpinner');
       expect(lastFrame()).not.toContain('✓');
     });
@@ -831,7 +831,7 @@ describe('<ToolMessage />', () => {
         <ToolMessage {...baseProps} status={ToolCallStatus.Executing} />,
         StreamingState.WaitingForConfirmation,
       );
-      expect(lastFrame()).toContain('⊷');
+      expect(lastFrame()).toMatch(/^ ⤳ /);
       expect(lastFrame()).not.toContain('MockRespondingSpinner');
       expect(lastFrame()).not.toContain('✓');
     });

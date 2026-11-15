@@ -7,7 +7,12 @@
 import type React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, expect, it, vi } from 'vitest';
-import { ErrorMessage, InfoMessage } from './StatusMessages.js';
+import {
+  ErrorMessage,
+  InfoMessage,
+  SuccessMessage,
+  WarningMessage,
+} from './StatusMessages.js';
 import { initializeI18n, setLanguageAsync, t } from '../../../i18n/index.js';
 import { parseAndFormatApiError } from '@qwen-code/qwen-code-core/utils/errorParsing.js';
 
@@ -86,5 +91,18 @@ describe('InfoMessage', () => {
       children: expect.anything(),
       url,
     });
+  });
+});
+
+describe('Zyn event presentation', () => {
+  it.each([
+    [InfoMessage, ' · Ready'],
+    [SuccessMessage, ' > Ready'],
+    [WarningMessage, ' ▲ Ready'],
+    [ErrorMessage, ' x Ready'],
+  ])('keeps a compact semantic event gutter', (Component, expected) => {
+    const view = render(<Component text="Ready" />);
+    expect(view.lastFrame()).toBe(expected);
+    view.unmount();
   });
 });

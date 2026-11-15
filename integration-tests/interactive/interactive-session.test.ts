@@ -38,6 +38,44 @@ describe('InteractiveSession.start ready-prompt budget', () => {
     }
   });
 
+  it.each([
+    'Type your message',
+    'Type a message...',
+    'Type your request, or /usage',
+  ])(
+    'accepts the actual ready prompt %s while ignoring startup tips',
+    async (prompt) => {
+      session = await InteractiveSession.start({
+        inheritEnv: false,
+        command: {
+          bin: process.execPath,
+          args: [
+            '-e',
+            `console.log('Tips: Type / to open commands');
+setTimeout(() => console.log(${JSON.stringify(prompt)}), 350);
+setInterval(() => {}, 1000);`,
+          ],
+        },
+      });
+      expect(session.output()).toContain(prompt);
+    },
+  );
+
+  it('supports an explicit isolated-fixture readiness marker', async () => {
+    session = await InteractiveSession.start({
+      inheritEnv: false,
+      readyText: 'FIXTURE_READY',
+      command: {
+        bin: process.execPath,
+        args: [
+          '-e',
+          "console.log('FIXTURE_READY'); setInterval(() => {}, 1000)",
+        ],
+      },
+    });
+    expect(session.output()).toContain('FIXTURE_READY');
+  });
+
   it('keeps the tight 30s signal outside self-hosted runners', async () => {
     vi.stubEnv('RUNNER_ENVIRONMENT', 'github-hosted');
     // The stub prints its ready prompt 5s past the tight budget and writes
@@ -63,7 +101,7 @@ setTimeout(() => {}, 120_000);`;
           session = s;
         }),
       ).rejects.toThrow(
-        'Timeout (30000ms) waiting for text: "Type your message"',
+        'Timeout (30000ms) waiting for text: "Type your message,Type a message...,Type your request, or /usage"',
       );
       const pid = Number(readFileSync(pidFile, 'utf8'));
       let alive = true;

@@ -8,19 +8,12 @@ import type React from 'react';
 import { Box, Text } from 'ink';
 import { ToolCallStatus } from '../../types.js';
 import { RespondingSpinner } from '../RespondingSpinner.js';
-import {
-  TOOL_STATUS,
-  SHELL_COMMAND_NAME,
-  SHELL_NAME,
-} from '../../constants.js';
+import { SHELL_COMMAND_NAME, SHELL_NAME } from '../../constants.js';
 import { theme } from '../../semantic-colors.js';
 
-// One column for the status glyph plus one trailing column so the tool
-// name never sits flush against the indicator. Paired with flexShrink={0}
-// on the indicator Box so the reservation survives a tight header row.
-// The fixed 2-col width ensures both 1-col and 2-col glyphs push text
-// to the same start position.
-export const STATUS_INDICATOR_WIDTH = 2;
+// The history gutter contributes two columns; reserve one more before the
+// glyph and one after it so tool titles and details align with message bodies.
+export const STATUS_INDICATOR_WIDTH = 3;
 
 type ToolStatusIndicatorProps = {
   status: ToolCallStatus;
@@ -33,38 +26,34 @@ export const ToolStatusIndicator: React.FC<ToolStatusIndicatorProps> = ({
 }) => {
   const isShell = name === SHELL_COMMAND_NAME || name === SHELL_NAME;
   const statusColor = isShell ? theme.ui.symbol : theme.status.warning;
+  const toolColor = theme.ui.tool ?? theme.text.link;
 
   return (
     // minWidth (not width) so the box can grow for wider content like the
     // tmux spinner frames or test mocks; all production glyphs are ≤2 cols.
-    <Box minWidth={STATUS_INDICATOR_WIDTH} flexShrink={0}>
-      {status === ToolCallStatus.Pending && (
-        <Text color={theme.status.success}>{TOOL_STATUS.PENDING}</Text>
-      )}
+    <Box minWidth={STATUS_INDICATOR_WIDTH} paddingLeft={1} flexShrink={0}>
+      {status === ToolCallStatus.Pending && <Text color={toolColor}>⤳</Text>}
       {status === ToolCallStatus.Executing && (
-        <RespondingSpinner
-          spinnerType="toggle"
-          nonRespondingDisplay={TOOL_STATUS.EXECUTING}
-        />
+        <RespondingSpinner spinnerType="toggle" nonRespondingDisplay="⤳" />
       )}
       {status === ToolCallStatus.Success && (
         <Text color={theme.status.success} aria-label={'Success:'}>
-          {TOOL_STATUS.SUCCESS}
+          ⤳
         </Text>
       )}
       {status === ToolCallStatus.Confirming && (
-        <Text color={statusColor} aria-label={'Confirming:'}>
-          {TOOL_STATUS.CONFIRMING}
+        <Text color={toolColor} aria-label={'Confirming:'}>
+          ⤳
         </Text>
       )}
       {status === ToolCallStatus.Canceled && (
         <Text color={statusColor} aria-label={'Canceled:'} bold>
-          {TOOL_STATUS.CANCELED}
+          ▲
         </Text>
       )}
       {status === ToolCallStatus.Error && (
         <Text color={theme.status.error} aria-label={'Error:'} bold>
-          {TOOL_STATUS.ERROR}
+          x
         </Text>
       )}
     </Box>

@@ -8,6 +8,7 @@ import { render } from 'ink-testing-library';
 import { render as inkRender } from 'ink';
 import type { DOMElement } from 'ink';
 import stripAnsi from 'strip-ansi';
+import stringWidth from 'string-width';
 import { EventEmitter } from 'node:events';
 import { createRef, type RefObject } from 'react';
 import { act } from '@testing-library/react';
@@ -107,9 +108,13 @@ const createMockUIState = (overrides: Partial<UIState> = {}): UIState =>
     ...overrides,
   }) as UIState;
 
+let customStatusFixture = false;
 const createMockSettings = (): LoadedSettings =>
   ({
     merged: {
+      ui: customStatusFixture
+        ? { statusLine: { type: 'command', command: 'fixture-status' } }
+        : {},
       general: {
         vimMode: false,
       },
@@ -267,6 +272,35 @@ const renderAtLayoutWidth = (
 };
 
 describe('<Footer />', () => {
+  it('shows a compact model/context/help row under a bounded separator', () => {
+    const ui = renderWithWidth(80, createMockUIState());
+    const frame = ui.lastFrame() ?? '';
+    expect(frame).toContain('> gemini-pro');
+    expect(frame).toContain('/help');
+    expect(
+      frame.split('\n').some((line) => line.trim().startsWith('────')),
+    ).toBe(true);
+    ui.unmount();
+  });
+
+  it.each([20, 40, 80, 120])(
+    'bounds long Unicode model metadata at a real %i-column terminal',
+    (width) => {
+      const ui = renderAtLayoutWidth(
+        width,
+        createMockUIState({ currentModel: 'very-long-🎵-model-'.repeat(12) }),
+      );
+      try {
+        const lines = stripAnsi(ui.lastFrame()).split('\n');
+        expect(lines.every((line) => stringWidth(line) <= width)).toBe(true);
+        expect(lines).toHaveLength(2);
+        expect(lines[1]).toContain('/help');
+      } finally {
+        ui.unmount();
+      }
+    },
+  );
+
   it.each([true, false])(
     'shows persistent requested mode separately from keyword state (available=%s)',
     (available) => {
@@ -288,6 +322,7 @@ describe('<Footer />', () => {
     },
   );
   beforeEach(() => {
+    customStatusFixture = false;
     useStatusLineMock.mockReturnValue({
       lines: [],
       useThemeColors: false,
@@ -467,7 +502,8 @@ describe('<Footer />', () => {
         const lines = stripAnsi(lastFrame())
           .split('\n')
           .map((line) => line.replace(/[ \t]+$/u, ''));
-        expect(lines).toHaveLength(1);
+        expect(lines).toHaveLength(3);
+        expect(lines.every((line) => stringWidth(line) <= 80)).toBe(true);
         // On win32 the auto-accept indicator renders '(tab to cycle)'
         // instead of '(shift + tab to cycle)'; the 8 columns it gives back
         // shift Yoga's proportional shrink by one column, truncating the
@@ -476,11 +512,11 @@ describe('<Footer />', () => {
         // spelling stays a substring of the POSIX one, so a future change
         // that restores the full hint does not fail this assertion).
         if (process.platform === 'win32') {
-          expect(lines[0]).toContain('Enter to steer · Ctrl+Q to queu');
+          expect(lines.at(-1)!).toContain('Enter to steer · Ctrl+Q to queu');
         } else {
-          expect(lines[0]).toContain('Enter to steer · Ctrl+Q to queue');
+          expect(lines.at(-1)!).toContain('Enter to steer · Ctrl+Q to queue');
         }
-        expect(lines[0]).toContain('⏳ 1');
+        expect(lines.at(-1)!).toContain('⏳ 1');
       } finally {
         unmount();
       }
@@ -505,11 +541,12 @@ describe('<Footer />', () => {
       const lines = stripAnsi(lastFrame())
         .split('\n')
         .map((line) => line.replace(/[ \t]+$/u, ''));
-      expect(lines).toHaveLength(1);
-      expect(lines[0]).toContain('⏳ 1');
+      expect(lines).toHaveLength(3);
+      expect(lines.every((line) => stringWidth(line) <= 80)).toBe(true);
+      expect(lines.at(-1)!).toContain('⏳ 1');
       // The approval node is the only `⚠` source in this state, so its
       // presence proves the node rendered before the row truncated it.
-      expect(lines[0]).toContain('⚠');
+      expect(lines.at(-1)!).toContain('⚠');
     } finally {
       unmount();
     }
@@ -585,7 +622,7 @@ describe('<Footer />', () => {
 
     expect(lastFrame()).not.toContain('IDE connecting');
     expect(lastFrame()).not.toContain('IDE connection unavailable');
-    expect(lastFrame()).toContain('? for shortcuts');
+    expect(lastFrame()).toContain('/help');
   });
 
   it('shows the active scheduled task count', () => {
@@ -649,17 +686,20 @@ describe('<Footer />', () => {
     expect(lastFrame()).not.toMatch(/\(.*\*\)/);
   });
 
-  it('displays the context percentage', () => {
+  it('displays used and available context tokens', () => {
     const { lastFrame } = renderWithWidth(120, createMockUIState());
-    expect(lastFrame()).toMatch(/\d+(\.\d+)?% context used/);
+    expect(lastFrame()).toContain('100/131k');
   });
 
-  it('displays the abbreviated context percentage on narrow terminal', () => {
+  it('keeps the context ratio compact on a narrow terminal', () => {
     const { lastFrame } = renderWithWidth(99, createMockUIState());
-    expect(lastFrame()).toMatch(/\d+%/);
+    expect(lastFrame()).toContain('100/131k');
   });
 
   describe('status line rendering', () => {
+    beforeEach(() => {
+      customStatusFixture = true;
+    });
     it('renders multi-line status line output', () => {
       useStatusLineMock.mockReturnValue({
         lines: ['model-name (main) ctx:34%', '████░░░░ 34% context'],
@@ -687,8 +727,11 @@ describe('<Footer />', () => {
       });
       const { lastFrame } = renderWithWidth(16, createMockUIState());
       const frame = lastFrame()!;
-      expect(frame).toContain('visible-start');
-      expect(frame).toContain('chunk-10');
+      expect(frame).toContain('visible-star');
+      expect(frame).toContain('t chunk-0');
+      expect(frame.split('\n').every((line) => stringWidth(line) <= 16)).toBe(
+        true,
+      );
       expect(frame).not.toContain('hidden-tail');
       expect(frame).not.toContain('? for shortcuts');
     });
@@ -707,7 +750,8 @@ describe('<Footer />', () => {
       });
       const { lastFrame } = renderWithWidth(16, createMockUIState());
       const frame = lastFrame()!;
-      expect(frame).toContain('first-line-start');
+      expect(frame).toContain('first-line-s');
+      expect(frame).toContain('tart part-0');
       expect(frame).not.toContain('first-line-tail');
       expect(frame).not.toContain('second-status-line');
       expect(frame).not.toContain('? for shortcuts');
@@ -744,11 +788,14 @@ describe('<Footer />', () => {
         hideContextIndicator: true,
       });
       const { lastFrame } = renderWithWidth(120, createMockUIState());
-      expect(lastFrame()).not.toMatch(/\d+(\.\d+)?% context used/);
+      expect(lastFrame()).not.toContain('100/131k');
     });
   });
 
   describe('config init message', () => {
+    beforeEach(() => {
+      customStatusFixture = true;
+    });
     it('shows init status in place of the hint while config is initializing', () => {
       const { lastFrame } = renderWithWidth(
         120,
@@ -792,13 +839,25 @@ describe('<Footer />', () => {
 
   describe('footer rendering (golden snapshots)', () => {
     it('renders complete footer on wide terminal', () => {
-      const { lastFrame } = renderWithWidth(120, createMockUIState());
-      expect(lastFrame()).toMatchSnapshot('complete-footer-wide');
+      const ui = renderAtLayoutWidth(120, createMockUIState());
+      try {
+        expect(stripAnsi(ui.lastFrame())).toMatchSnapshot(
+          'complete-footer-wide',
+        );
+      } finally {
+        ui.unmount();
+      }
     });
 
     it('renders complete footer on narrow terminal', () => {
-      const { lastFrame } = renderWithWidth(79, createMockUIState());
-      expect(lastFrame()).toMatchSnapshot('complete-footer-narrow');
+      const ui = renderAtLayoutWidth(79, createMockUIState());
+      try {
+        expect(stripAnsi(ui.lastFrame())).toMatchSnapshot(
+          'complete-footer-narrow',
+        );
+      } finally {
+        ui.unmount();
+      }
     });
   });
 });

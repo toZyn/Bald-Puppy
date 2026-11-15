@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'ink-testing-library';
-import type { DOMElement } from 'ink';
+import { Text, type DOMElement } from 'ink';
 import stringWidth from 'string-width';
 import {
   BaseTextInput,
@@ -108,6 +108,37 @@ describe('BaseTextInput', () => {
       left: 0,
       hasMeasured: true,
     });
+  });
+
+  it('renders the inline main composer as one indented prompt without horizontal rules', () => {
+    const ui = render(
+      <BaseTextInput
+        buffer={createBuffer()}
+        onSubmit={vi.fn()}
+        variant="inline"
+        prefix={<Text>❯ </Text>}
+        placeholder="Type a message..."
+        showCursor={false}
+      />,
+    );
+    const lines = (ui.lastFrame() ?? '').split('\n');
+    expect(lines).toEqual(['   ❯ Type a message...']);
+    ui.unmount();
+  });
+
+  it('positions the inline IME cursor on the input row instead of a removed border row', () => {
+    expect(
+      getPhysicalCursorPosition(createElement(4, 3), {
+        hasMeasured: true,
+        showCursor: true,
+        cursorVisualRow: 0,
+        cursorVisualCol: 3,
+        scrollVisualRow: 0,
+        linesToRender: ['abc'],
+        prefixWidth: 2,
+        contentOffsetY: 0,
+      }),
+    ).toEqual({ x: 8, y: 4 });
   });
 
   it('does not type the render-mode shortcut into the buffer', () => {

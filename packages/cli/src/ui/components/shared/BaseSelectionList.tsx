@@ -162,8 +162,8 @@ export function BaseSelectionList<
         let numberColor = theme.text.primary;
 
         if (isSelected) {
-          titleColor = theme.status.success;
-          numberColor = theme.status.success;
+          titleColor = theme.text.accent;
+          numberColor = theme.text.accent;
         } else if (item.disabled) {
           titleColor = theme.text.secondary;
           numberColor = theme.text.secondary;
@@ -192,10 +192,10 @@ export function BaseSelectionList<
             {/* Radio button indicator */}
             <Box minWidth={2} flexShrink={0}>
               <Text
-                color={isSelected ? theme.status.success : theme.text.primary}
+                color={isSelected ? theme.text.accent : theme.text.primary}
                 aria-hidden
               >
-                {isSelected ? '›' : ' '}
+                {isSelected ? '▸' : ' '}
               </Text>
             </Box>
 

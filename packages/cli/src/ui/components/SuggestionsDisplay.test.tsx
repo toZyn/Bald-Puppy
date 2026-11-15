@@ -164,7 +164,7 @@ describe('SuggestionsDisplay', () => {
     const lines = (lastFrame() ?? '').split('\n');
 
     expect(lines[0]).toMatch(/^ {2}pr/);
-    expect(lines[1]).toMatch(/^> issue-to-pr/);
+    expect(lines[1]).toMatch(/^▸ issue-to-pr/);
   });
 
   it('keeps slash command names intact when argument hints overflow', () => {
@@ -198,7 +198,7 @@ describe('SuggestionsDisplay', () => {
 
     const lines = (lastFrame() ?? '').split('\n');
 
-    expect(lines).toContainEqual(expect.stringMatching(/^> review(?: |$)/));
+    expect(lines).toContainEqual(expect.stringMatching(/^▸ review(?: |$)/));
     expect(lines).toContainEqual(expect.stringMatching(/^ {2}doctor(?: |$)/));
   });
 });

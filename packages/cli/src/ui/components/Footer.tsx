@@ -35,6 +35,7 @@ import { CronPill, useFooterCronTaskCount } from './CronPill.js';
 import { t } from '../../i18n/index.js';
 import { useKeypressContext } from '../contexts/KeypressContext.js';
 import { StreamingState } from '../types.js';
+import { formatTokenCount } from '../utils/formatters.js';
 
 import type { PasteProgress } from '../contexts/KeypressContext.js';
 
@@ -77,6 +78,10 @@ export const Footer: React.FC<FooterProps> = ({ containerRef }) => {
     isNarrow,
     hasMeasuredStatusLine ? statusLineWidth : undefined,
   );
+  const compactStatus =
+    settings.merged.ui?.statusLine === undefined &&
+    !uiState.statusLineConfigOverride;
+  const visibleStatusLines = compactStatus ? [] : statusLineLines;
   const configInitMessage = useConfigInitMessage(uiState.isConfigInitialized);
 
   const { promptTokenCount, showAutoAcceptIndicator } = {
@@ -104,7 +109,7 @@ export const Footer: React.FC<FooterProps> = ({ containerRef }) => {
 
   // Hide "? for shortcuts" when a custom status line is active (it already
   // occupies the footer, so the hint is redundant). Matches upstream behavior.
-  const suppressHint = statusLineLines.length > 0;
+  const suppressHint = compactStatus || visibleStatusLines.length > 0;
 
   // MCP init progress lives in this row (not a standalone component above the
   // input) so the live area's height is constant in the default case, avoiding
@@ -186,7 +191,12 @@ export const Footer: React.FC<FooterProps> = ({ containerRef }) => {
   // alongside the other background-task kinds. The previous `◆ dreaming`
   // right-column indicator was removed to avoid two simultaneous signals
   // for the same underlying state.
-  if (promptTokenCount > 0 && contextWindowSize && !hideContextIndicator) {
+  if (
+    !compactStatus &&
+    promptTokenCount > 0 &&
+    contextWindowSize &&
+    !hideContextIndicator
+  ) {
     rightItems.push({
       key: 'context',
       node: (
@@ -215,55 +225,94 @@ export const Footer: React.FC<FooterProps> = ({ containerRef }) => {
     rightItems.push({ key: 'cron', node: <CronPill count={cronTaskCount} /> });
   }
 
+  const turns =
+    uiState.historyManager?.history.filter((item) => item.type === 'user')
+      .length ?? 0;
+  const contextText =
+    promptTokenCount > 0 && contextWindowSize
+      ? `${formatTokenCount(promptTokenCount)}/${formatTokenCount(contextWindowSize)}`
+      : '';
+
   // Layout matches upstream: left column has status line (top) + hints/mode
   // (bottom), right section has indicators. Status line and hints coexist.
   return (
     <Box
       ref={containerRef}
-      flexDirection={isNarrow ? 'column' : 'row'}
-      justifyContent={isNarrow ? 'flex-start' : 'space-between'}
+      flexDirection="column"
       width="100%"
-      paddingX={2}
-      gap={isNarrow ? 0 : 1}
+      maxWidth={terminalWidth}
     >
-      {/* Left column — status line on top, hints/mode on bottom */}
+      <Box paddingX={1}>
+        <Text color={theme.border.default} wrap="truncate-end">
+          {'─'.repeat(Math.max(0, Math.min(terminalWidth - 4, 120)))}
+        </Text>
+      </Box>
+      {compactStatus && (
+        <Box paddingX={2} width="100%">
+          <Box width={2} flexShrink={0}>
+            <Text color={theme.text.accent}>{'> '}</Text>
+          </Box>
+          <Box flexGrow={1} flexShrink={1} minWidth={0}>
+            <Text color={theme.ui.symbol} wrap="truncate-end">
+              {uiState.currentModel}
+              {terminalWidth >= 60 && turns > 0
+                ? ` · ${t('{{count}} turns', { count: String(turns) })}`
+                : ''}
+            </Text>
+          </Box>
+          <Box flexShrink={0}>
+            <Text color={theme.ui.comment}>
+              {terminalWidth >= 40 && contextText ? `${contextText}  ` : ''}
+              /help
+            </Text>
+          </Box>
+        </Box>
+      )}
       <Box
-        ref={statusLineRef}
-        flexDirection="column"
-        flexGrow={1}
-        flexShrink={isNarrow ? 0 : 1}
-        minWidth={0}
+        flexDirection={isNarrow ? 'column' : 'row'}
+        justifyContent={isNarrow ? 'flex-start' : 'space-between'}
+        width="100%"
+        paddingX={2}
+        gap={isNarrow ? 0 : 1}
       >
-        {executionSandbox && (
-          <Text color={theme.text.secondary} wrap="wrap">
-            {executionSandbox}
-          </Text>
-        )}
-        {statusLineLines.length > 0 &&
-          !uiState.ctrlCPressedOnce &&
-          !uiState.ctrlDPressedOnce && (
-            <Box
-              flexDirection="column"
-              maxHeight={MAX_STATUS_LINES}
-              overflow="hidden"
-              width="100%"
-            >
-              <Text
-                color={
-                  respectUserColors
-                    ? undefined
-                    : useThemeColors
-                      ? theme.text.accent
-                      : undefined
-                }
-                dimColor={respectUserColors ? false : !useThemeColors}
-                wrap="wrap"
-              >
-                {statusLineLines.join('\n')}
-              </Text>
-            </Box>
+        {/* Left column — status line on top, hints/mode on bottom */}
+        <Box
+          ref={statusLineRef}
+          flexDirection="column"
+          flexGrow={1}
+          flexShrink={isNarrow ? 0 : 1}
+          minWidth={0}
+        >
+          {executionSandbox && (
+            <Text color={theme.text.secondary} wrap="wrap">
+              {executionSandbox}
+            </Text>
           )}
-        {/* Built-in worktree indicator. Shown by default whenever a
+          {visibleStatusLines.length > 0 &&
+            !uiState.ctrlCPressedOnce &&
+            !uiState.ctrlDPressedOnce && (
+              <Box
+                flexDirection="column"
+                maxHeight={MAX_STATUS_LINES}
+                overflow="hidden"
+                width="100%"
+              >
+                <Text
+                  color={
+                    respectUserColors
+                      ? undefined
+                      : useThemeColors
+                        ? theme.text.accent
+                        : undefined
+                  }
+                  dimColor={respectUserColors ? false : !useThemeColors}
+                  wrap="wrap"
+                >
+                  {visibleStatusLines.join('\n')}
+                </Text>
+              </Box>
+            )}
+          {/* Built-in worktree indicator. Shown by default whenever a
             worktree is active so the user always has a UI affordance,
             even when a custom statusline is configured — their script
             may not render `payload.worktree` (written before Phase C,
@@ -274,73 +323,74 @@ export const Footer: React.FC<FooterProps> = ({ containerRef }) => {
             in via the `ui.hideBuiltinWorktreeIndicator` setting.
             Hidden during ctrl-quit warnings so they take precedence.
             (PR #4174 review #3256241831.) */}
-        {uiState.activeWorktree &&
-          !settings.merged.ui?.hideBuiltinWorktreeIndicator &&
-          !uiState.ctrlCPressedOnce &&
-          !uiState.ctrlDPressedOnce && (
-            <Text dimColor wrap="truncate">
-              {`⎇ ${uiState.activeWorktree.branch} (${uiState.activeWorktree.slug})`}
-            </Text>
-          )}
-        {workflowMode?.requested &&
-          !uiState.ctrlCPressedOnce &&
-          !uiState.ctrlDPressedOnce && (
-            <Text
-              color={
-                workflowMode.effective
-                  ? theme.text.accent
-                  : theme.status.warning
-              }
-              wrap="truncate"
-            >
-              {workflowMode.effective
-                ? 'Workflow mode: on'
-                : 'Workflow mode: on (unavailable)'}
-            </Text>
-          )}
-        {/* P7-trigger: the current turn was steered toward the Workflow tool
+          {uiState.activeWorktree &&
+            !settings.merged.ui?.hideBuiltinWorktreeIndicator &&
+            !uiState.ctrlCPressedOnce &&
+            !uiState.ctrlDPressedOnce && (
+              <Text dimColor wrap="truncate">
+                {`⎇ ${uiState.activeWorktree.branch} (${uiState.activeWorktree.slug})`}
+              </Text>
+            )}
+          {workflowMode?.requested &&
+            !uiState.ctrlCPressedOnce &&
+            !uiState.ctrlDPressedOnce && (
+              <Text
+                color={
+                  workflowMode.effective
+                    ? theme.text.accent
+                    : theme.status.warning
+                }
+                wrap="truncate"
+              >
+                {workflowMode.effective
+                  ? 'Workflow mode: on'
+                  : 'Workflow mode: on (unavailable)'}
+              </Text>
+            )}
+          {/* P7-trigger: the current turn was steered toward the Workflow tool
             by the `workflow` keyword. Hidden during ctrl-quit warnings so they
             take precedence (matches the worktree indicator above). */}
-        {uiState.workflowKeywordActive &&
-          !uiState.ctrlCPressedOnce &&
-          !uiState.ctrlDPressedOnce && (
-            <Text color={theme.text.accent} wrap="truncate">
-              {`▷ ${t('workflow active')}`}
-            </Text>
-          )}
-        <Box flexDirection="row" flexShrink={1}>
-          {/* Every child of this shrinkable row must keep wrap="truncate", or
+          {uiState.workflowKeywordActive &&
+            !uiState.ctrlCPressedOnce &&
+            !uiState.ctrlDPressedOnce && (
+              <Text color={theme.text.accent} wrap="truncate">
+                {`▷ ${t('workflow active')}`}
+              </Text>
+            )}
+          <Box flexDirection="row" flexShrink={1}>
+            {/* Every child of this shrinkable row must keep wrap="truncate", or
               the footer grows mid-turn once the row overflows (#8667/#8666). */}
-          <Text wrap="truncate">{leftBottomContent}</Text>
-          <BackgroundTasksPill />
-          <MCPHealthPill />
-          {uiState.messageQueue.length > 0 && (
-            <Text color={theme.text.secondary} wrap="truncate">
-              {` ⏳ ${t('{{count}} queued', {
-                count: String(uiState.messageQueue.length),
-              })}`}
-            </Text>
-          )}
-          {!uiState.isSkillReviewDialogOpen &&
-            (uiState.skillReviewPending?.skills.length ?? 0) > 0 && (
-              <Text color={theme.status.warning} wrap="truncate">
-                {` ⚠ ${t('{{count}} skill(s) pending review', {
-                  count: String(uiState.skillReviewPending!.skills.length),
+            <Text wrap="truncate">{leftBottomContent}</Text>
+            <BackgroundTasksPill />
+            <MCPHealthPill />
+            {uiState.messageQueue.length > 0 && (
+              <Text color={theme.text.secondary} wrap="truncate">
+                {` ⏳ ${t('{{count}} queued', {
+                  count: String(uiState.messageQueue.length),
                 })}`}
               </Text>
             )}
-        </Box>
-      </Box>
-
-      {/* Right Section — never compressed, aligns to top so multi-line
-          status lines on the left don't push the indicators to the center. */}
-      <Box flexShrink={0} gap={1} alignItems="flex-start">
-        {rightItems.map(({ key, node }, index) => (
-          <Box key={key} alignItems="center">
-            {index > 0 && <Text color={theme.text.secondary}> | </Text>}
-            {node}
+            {!uiState.isSkillReviewDialogOpen &&
+              (uiState.skillReviewPending?.skills.length ?? 0) > 0 && (
+                <Text color={theme.status.warning} wrap="truncate">
+                  {` ⚠ ${t('{{count}} skill(s) pending review', {
+                    count: String(uiState.skillReviewPending!.skills.length),
+                  })}`}
+                </Text>
+              )}
           </Box>
-        ))}
+        </Box>
+
+        {/* Right Section — never compressed, aligns to top so multi-line
+          status lines on the left don't push the indicators to the center. */}
+        <Box flexShrink={0} gap={1} alignItems="flex-start">
+          {rightItems.map(({ key, node }, index) => (
+            <Box key={key} alignItems="center">
+              {index > 0 && <Text color={theme.text.secondary}> | </Text>}
+              {node}
+            </Box>
+          ))}
+        </Box>
       </Box>
     </Box>
   );

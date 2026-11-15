@@ -240,7 +240,7 @@ export function SuggestionsDisplay({
             }}
           >
             <Box width={ACTIVE_MARKER_WIDTH} flexShrink={0}>
-              <Text color={textColor}>{isActive ? '> ' : '  '}</Text>
+              <Text color={textColor}>{isActive ? '▸ ' : '  '}</Text>
             </Box>
             <Box
               {...(mode === 'slash' || suggestion.description

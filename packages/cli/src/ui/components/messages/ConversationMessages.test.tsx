@@ -8,6 +8,7 @@ import { render } from 'ink-testing-library';
 import { Text } from 'ink';
 import { vi } from 'vitest';
 import {
+  UserMessage,
   AssistantMessage,
   AssistantMessageContent,
   ThinkMessage,
@@ -88,7 +89,7 @@ describe('<AssistantMessage />', () => {
       />,
     );
 
-    expect(lastFrame()).toContain('MockTerminalImage:image/png:height=10');
+    expect(lastFrame()).toContain('MockTerminalImage:image/png:height=9');
   });
 });
 
@@ -351,4 +352,84 @@ describe('<ThinkMessageContent />', () => {
     expect(output).toContain('Line 3');
     expect(output).toContain('Line 4');
   });
+});
+
+describe('Zyn transcript presentation', () => {
+  it('separates the user role from a multiline message body', () => {
+    const view = render(<UserMessage text={'First line\nSecond line'} />);
+    expect(view.lastFrame()).toBe('\n > You\n   First line\n   Second line');
+    view.unmount();
+  });
+
+  it('separates the assistant role from its response', () => {
+    const view = render(
+      <AssistantMessage
+        text="The response"
+        isPending={false}
+        contentWidth={80}
+      />,
+    );
+    expect(view.lastFrame()).toBe(' ◉ Bald Puppy\n   The response');
+    view.unmount();
+  });
+
+  it('marks a streaming answer without repeating the role on continuation rows', () => {
+    const head = render(
+      <AssistantMessage text="Working" isPending={true} contentWidth={80} />,
+    );
+    expect(head.lastFrame()).toContain(' ◉ Bald Puppy\n   Working\n   ▎');
+    head.unmount();
+    const continuation = render(
+      <AssistantMessageContent
+        text="More content"
+        isPending={true}
+        contentWidth={80}
+      />,
+    );
+    expect(continuation.lastFrame()).toBe('   More content');
+    continuation.unmount();
+  });
+
+  it('uses the muted thinking event glyph', () => {
+    const view = render(
+      <ThinkMessage text="Reasoning" isPending={false} contentWidth={80} />,
+    );
+    expect(view.lastFrame()).toContain(' ◐ Thinking');
+    view.unmount();
+  });
+});
+
+describe('assistant viewport budgets', () => {
+  it.each([1, 2, 3])(
+    'keeps a streaming answer inside a %s-row budget',
+    (height) => {
+      const view = render(
+        <AssistantMessage
+          text={'One\nTwo\nThree\nFour'}
+          isPending={true}
+          availableTerminalHeight={height}
+          contentWidth={12}
+        />,
+      );
+      const lines = (view.lastFrame() ?? '').split('\n');
+      expect(lines.length).toBeLessThanOrEqual(height);
+      expect(view.lastFrame()).toContain('One');
+      expect(view.lastFrame()?.includes('Bald Puppy')).toBe(height >= 2);
+      expect(view.lastFrame()?.includes('▎')).toBe(height >= 3);
+      view.unmount();
+    },
+  );
+});
+
+it('renders no pending response when no viewport rows remain', () => {
+  const view = render(
+    <AssistantMessage
+      text="Waiting"
+      isPending={true}
+      availableTerminalHeight={0}
+      contentWidth={80}
+    />,
+  );
+  expect(view.lastFrame()).toBe('');
+  view.unmount();
 });

@@ -8,6 +8,10 @@
 // The key serves as both the translation key and the default English text
 
 export default {
+  You: 'You',
+  'Type a message...': 'Type a message...',
+  '{{count}} turns': '{{count}} turns',
+
   "You've used up your weekly credits.{{reset}} You can wait or run /upgrade to get more credits.":
     "You've used up your weekly credits.{{reset}} You can wait or run /upgrade to get more credits.",
   "You've used up your weekly credits.{{reset}} Please try again after the reset.":

@@ -114,7 +114,7 @@ describe('DescriptiveRadioButtonSelect', () => {
       ],
     });
 
-    expect(lastFrame()).toBe('› Foo Title\n  Bar Title');
+    expect(lastFrame()).toBe('▸ Foo Title\n  Bar Title');
   });
 
   it('renders a non-string (ReactNode) description', () => {
@@ -129,6 +129,6 @@ describe('DescriptiveRadioButtonSelect', () => {
       ],
     });
 
-    expect(lastFrame()).toBe('› Foo Title\n  Custom node description');
+    expect(lastFrame()).toBe('▸ Foo Title\n  Custom node description');
   });
 });

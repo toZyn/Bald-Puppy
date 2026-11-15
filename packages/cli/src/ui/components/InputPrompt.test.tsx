@@ -5121,8 +5121,9 @@ describe('InputPrompt', () => {
       expect(frame).toContain(`world${renderSoftwareCursor(' ')}`);
 
       const outputLines = frame!.split('\n');
-      // The number of lines should be 2 for the border plus 3 for the content.
-      expect(outputLines.length).toBe(5);
+      // Inline input retains all three content rows without framing rules.
+      expect(outputLines.length).toBe(3);
+      expect(outputLines[1].trim()).toBe('');
       unmount();
     });
   });

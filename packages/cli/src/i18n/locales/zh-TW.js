@@ -9,6 +9,10 @@
 // then extensively hand-corrected for Taiwan vocabulary conventions.
 // This file is the authoritative source — do not overwrite with auto-generated output.
 export default {
+  You: '你',
+  'Type a message...': '輸入訊息...',
+  '{{count}} turns': '{{count}} 輪',
+
   "You've used up your weekly credits.{{reset}} You can wait or run /upgrade to get more credits.":
     '週額度已用完{{reset}}。您可以等待額度恢復，或執行 /upgrade 升級方案以取得更多額度。',
   "You've used up your weekly credits.{{reset}} Please try again after the reset.":

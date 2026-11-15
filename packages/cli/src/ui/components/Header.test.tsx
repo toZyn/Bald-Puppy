@@ -73,6 +73,13 @@ describe('<Header />', () => {
     },
   );
 
+  it('keeps cwd metadata and removes the Qwen model-change hint from the compact banner', () => {
+    const ui = render(<Header {...defaultProps} />);
+    expect(ui.lastFrame()).toContain('cwd: /home/user/projects/test');
+    expect(ui.lastFrame()).not.toContain('/model to change');
+    ui.unmount();
+  });
+
   it('displays the version number', () => {
     const { lastFrame } = render(<Header {...defaultProps} />);
     expect(lastFrame()).toContain('v1.0.0');

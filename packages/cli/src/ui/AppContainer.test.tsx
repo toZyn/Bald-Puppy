@@ -2567,6 +2567,53 @@ describe('AppContainer State Management', () => {
       (measureElement as Mock).mockReset();
     });
 
+    it('re-emits one-shot VP history after keyboard height changes without clearing scrollback', () => {
+      vi.useFakeTimers();
+      vi.spyOn(mockConfig, 'initialize').mockResolvedValue(undefined);
+      (measureElement as Mock).mockReturnValue({ width: 80, height: 2 });
+      let rows = 24;
+      const listeners = new Set<() => void>();
+      mockedUseTerminalSize.mockImplementation(() => {
+        const [, force] = useReducer((n: number) => n + 1, 0);
+        useEffect(() => {
+          listeners.add(force);
+          return () => {
+            listeners.delete(force);
+          };
+        }, []);
+        return { columns: 80, rows };
+      });
+      const ui = render(
+        <AppContainer
+          config={mockConfig}
+          settings={mockSettings}
+          version="1.0.0"
+          initializationResult={mockInitResult}
+          initialUseVirtualViewport={true}
+        />,
+      );
+      try {
+        expect(listeners.size).toBeGreaterThan(0);
+        const before = capturedUIState.historyRemountKey;
+        mockStdout.write.mockClear();
+        act(() => {
+          rows = 12;
+          for (const notify of listeners) notify();
+        });
+        act(() => {
+          vi.advanceTimersByTime(651);
+        });
+        expect(capturedUIState.historyRemountKey).toBeGreaterThan(before);
+        expect(mockStdout.write).not.toHaveBeenCalledWith(
+          ansiEscapes.clearTerminal,
+        );
+      } finally {
+        ui.unmount();
+        vi.useRealTimers();
+        (measureElement as Mock).mockReset();
+      }
+    });
+
     it('handleClearScreen avoids a second clearTerminal write', () => {
       const clearSpy = vi.spyOn(console, 'clear').mockImplementation(() => {});
 

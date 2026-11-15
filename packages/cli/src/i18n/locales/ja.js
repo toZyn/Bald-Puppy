@@ -7,6 +7,10 @@
 // Japanese translations for Qwen Code CLI
 
 export default {
+  You: 'あなた',
+  'Type a message...': 'メッセージを入力...',
+  '{{count}} turns': '{{count}} ターン',
+
   'Generated UI': 'Generated UI（生成 UI）',
   'Enable bundled Generated UI in supported local sessions. Restart the owning session to apply changes.':
     '対応するローカルセッションで内蔵 Generated UI を有効にします。変更を適用するには対象のセッションを再起動してください。',

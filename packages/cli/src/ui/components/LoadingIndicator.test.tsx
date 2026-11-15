@@ -6,7 +6,8 @@
 
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { Text } from 'ink';
+import { Box, Text } from 'ink';
+import stringWidth from 'string-width';
 import { LoadingIndicator } from './LoadingIndicator.js';
 import { StreamingContext } from '../contexts/StreamingContext.js';
 import { StreamingState } from '../types.js';
@@ -62,6 +63,15 @@ describe('<LoadingIndicator />', () => {
       StreamingState.Idle,
     );
     expect(lastFrame()).toBe('');
+  });
+
+  it('aligns the loading event at the Zyn detail gutter', () => {
+    const view = renderWithContext(
+      <LoadingIndicator {...defaultProps} />,
+      StreamingState.Responding,
+    );
+    expect(view.lastFrame()).toMatch(/^ {5}MockRespondingSpinner Loading/);
+    view.unmount();
   });
 
   it('should render spinner, phrase, and time when streamingState is Responding', () => {
@@ -213,6 +223,25 @@ describe('<LoadingIndicator />', () => {
     expect(lastFrame()).toBe('');
   });
 
+  it('keeps a long phrase on one physical row at 40 columns', () => {
+    const view = renderWithContext(
+      <Box width={40}>
+        <LoadingIndicator
+          currentLoadingPhrase="Defragmenting memories... both RAM and childhood"
+          elapsedTime={5}
+        />
+      </Box>,
+      StreamingState.Responding,
+      40,
+    );
+    const lines = (view.lastFrame() ?? '').split('\n');
+    expect(lines).toHaveLength(2);
+    expect(lines.every((line) => stringWidth(line) <= 40)).toBe(true);
+    expect(lines[0]).toContain('…');
+    expect(lines[1]).toContain('esc to cancel');
+    view.unmount();
+  });
+
   it('should truncate long primary text instead of wrapping', () => {
     const { lastFrame } = renderWithContext(
       <LoadingIndicator
@@ -225,6 +254,10 @@ describe('<LoadingIndicator />', () => {
       80,
     );
 
+    const lines = (lastFrame() ?? '').split('\n');
+    expect(lines).toHaveLength(1);
+    expect(stringWidth(lines[0])).toBeLessThanOrEqual(80);
+    expect(lines[0]).toContain('esc to cancel');
     expect(lastFrame()).toMatchSnapshot();
   });
 

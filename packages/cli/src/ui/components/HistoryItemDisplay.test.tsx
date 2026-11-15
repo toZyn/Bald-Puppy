@@ -110,7 +110,7 @@ describe('<HistoryItemDisplay />', () => {
 
     const output = lastFrame() ?? '';
     expect(output.startsWith('\n')).toBe(true);
-    expect(output).toContain('◆\uFE0E Hello');
+    expect(output).toContain('   ◉ Bald Puppy\n     Hello');
   });
 
   it.each(['gemini', 'gemini_content'] as const)(
@@ -454,6 +454,9 @@ describe('<HistoryItemDisplay />', () => {
       />,
     );
 
+    expect(lastFrame()).toContain('... first 42 lines hidden ...');
+    expect(lastFrame()).toContain('43 Line 43');
+    expect(lastFrame()).toContain('50 Line 50');
     expect(lastFrame()).toMatchSnapshot();
   });
 
@@ -473,6 +476,7 @@ describe('<HistoryItemDisplay />', () => {
       />,
     );
 
+    expect(lastFrame()).toContain('50 Line 50');
     expect(lastFrame()).toMatchSnapshot();
   });
 
@@ -491,6 +495,9 @@ describe('<HistoryItemDisplay />', () => {
       />,
     );
 
+    expect(lastFrame()).toContain('... first 41 lines hidden ...');
+    expect(lastFrame()).toContain('42 Line 42');
+    expect(lastFrame()).toContain('50 Line 50');
     expect(lastFrame()).toMatchSnapshot();
   });
 
@@ -510,6 +517,7 @@ describe('<HistoryItemDisplay />', () => {
       />,
     );
 
+    expect(lastFrame()).toContain('50 Line 50');
     expect(lastFrame()).toMatchSnapshot();
   });
 
@@ -1054,10 +1062,10 @@ it.each([true, false])(
       if (subscriptionPresentation) {
         expect(stripAnsi(frame)).not.toMatch(/[●•]/u);
         expect(frame).toContain(
-          `${check} Signed in successfully · builder@example.com`,
+          `${check} ${inkChalk.hex(theme.text.primary)('Signed in successfully · builder@example.com')}`,
         );
         expect(frame).toContain(
-          `${check} Current plan: Qwen Pro. Qwen Code is ready.`,
+          `${check} ${inkChalk.hex(theme.text.primary)('Current plan: Qwen Pro. Qwen Code is ready.')}`,
         );
         expect(frame).toContain(
           inkChalk.hex(theme.text.secondary)(
@@ -1068,7 +1076,7 @@ it.each([true, false])(
           '/usage   /upgrade   /model   /effort   /status   /logout',
         );
       } else {
-        expect(stripAnsi(frame)).toMatch(/[●•]/u);
+        expect(stripAnsi(frame)).toMatch(/^ {3}· /u);
         expect(frame).not.toContain(check);
       }
     } finally {

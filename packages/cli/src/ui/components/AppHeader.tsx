@@ -57,7 +57,8 @@ export const AppHeader = ({ version }: AppHeaderProps) => {
   const targetDir = config.getTargetDir();
   const showBanner =
     !config.getScreenReader() && !settings.merged.ui?.hideBanner;
-  const showTips = !(settings.merged.ui?.hideTips || config.getScreenReader());
+  const showTips =
+    settings.merged.ui?.hideTips === false && !config.getScreenReader();
 
   const authDisplayType = getAuthDisplayType(
     authType,

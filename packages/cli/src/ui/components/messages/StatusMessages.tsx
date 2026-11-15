@@ -49,7 +49,7 @@ export const StatusMessage: React.FC<StatusMessageProps> = ({
   const prefixWidth = stringWidth(prefix) + 1;
 
   return (
-    <Box flexDirection="row">
+    <Box flexDirection="row" paddingLeft={1}>
       <Box width={prefixWidth} flexShrink={0}>
         <Text color={prefixColor}>{prefix}</Text>
       </Box>
@@ -92,9 +92,9 @@ export const InfoMessage: React.FC<StatusTextProps> = ({
   ) : (
     <StatusMessage
       text={text}
-      prefix={ICON.CIRCLE_FILLED}
-      prefixColor={theme.text.primary}
-      textColor={theme.text.primary}
+      prefix="·"
+      prefixColor={theme.text.secondary}
+      textColor={theme.text.secondary}
       footer={
         linkUrl && (
           <Link url={linkUrl}>
@@ -110,18 +110,18 @@ export const InfoMessage: React.FC<StatusTextProps> = ({
 export const SuccessMessage: React.FC<StatusTextProps> = ({ text }) => (
   <StatusMessage
     text={text}
-    prefix="✓"
+    prefix=">"
     prefixColor={theme.status.success}
-    textColor={theme.status.success}
+    textColor={theme.text.secondary}
   />
 );
 
 export const WarningMessage: React.FC<StatusTextProps> = ({ text }) => (
   <StatusMessage
     text={text}
-    prefix={ICON.TRIANGLE}
+    prefix="▲"
     prefixColor={theme.status.warning}
-    textColor={theme.status.warning}
+    textColor={theme.text.secondary}
   />
 );
 
@@ -136,9 +136,9 @@ export const ErrorMessage: React.FC<StatusTextProps & { hint?: string }> = ({
         ? t(text)
         : text
     }
-    prefix="✕"
+    prefix="x"
     prefixColor={theme.status.error}
-    textColor={theme.status.error}
+    textColor={theme.text.secondary}
   >
     {hint && <Text color={theme.text.secondary}> ({hint})</Text>}
   </StatusMessage>
@@ -171,7 +171,7 @@ export const VisionNoticeMessage: React.FC<StatusTextProps> = ({ text }) => (
 // dim-colored. Rendered as a regular history item so it scrolls with
 // the conversation instead of pinning above the input.
 export const AwayRecapMessage: React.FC<StatusTextProps> = ({ text }) => (
-  <Box flexDirection="row">
+  <Box flexDirection="row" paddingLeft={1}>
     <Box width={2} flexShrink={0}>
       <Text color={theme.text.secondary}>{ICON.REFERENCE}</Text>
     </Box>

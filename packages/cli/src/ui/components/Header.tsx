@@ -9,15 +9,12 @@ import { Box, Text } from 'ink';
 import Gradient from 'ink-gradient';
 import { tildeifyPath } from '@qwen-code/qwen-code-core/utils/paths.js';
 import { theme } from '../semantic-colors.js';
-import {
-  getAsciiArtWidth,
-  getCachedStringWidth,
-  truncateToWidth,
-} from '../utils/textUtils.js';
+import { getAsciiArtWidth, truncateToWidth } from '../utils/textUtils.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { getRenderableGradientColors } from '../utils/gradientUtils.js';
 import { pickAsciiArtTier } from '../utils/customBanner.js';
 import { t } from '../../i18n/index.js';
+import { TERMINAL_APP_NAME } from '../terminal-brand.js';
 import { formatVersionLabel } from '../../utils/version.js';
 
 /**
@@ -140,23 +137,16 @@ export const Header: React.FC<HeaderProps> = ({
     availableInfoPanelWidth - infoPanelChromeWidth,
   );
 
-  const infoPanelContentWidth = Math.max(
-    0,
-    availableInfoPanelWidth - infoPanelChromeWidth,
-  );
   const authModelText =
     authDisplayType === 'Qwen Subscription'
       ? `${subscriptionPlan ? `Qwen ${subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1)} | ` : ''}[Qwen Subscription] ${model}`
       : `${formattedAuthType} | ${model}`;
-  const modelHintText = ' (/model to change)';
-  const showModelHint =
-    infoPanelContentWidth > 0 &&
-    getCachedStringWidth(authModelText + modelHintText) <=
-      infoPanelContentWidth;
-
   // Now shorten the path to fit the available space
   const tildeifiedPath = tildeifyPath(workingDirectory);
-  const displayPath = truncateToWidth(tildeifiedPath, maxPathLength);
+  const displayPath = truncateToWidth(
+    tildeifiedPath,
+    Math.max(0, maxPathLength - 5),
+  );
 
   const gradientColors = getRenderableGradientColors(theme.ui.gradient, [
     theme.text.secondary,
@@ -170,6 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
       alignItems="center"
       marginX={containerMarginX}
       width={availableTerminalWidth}
+      marginTop={1}
     >
       {/* Left side: ASCII logo (only if enough space) */}
       {showLogo && (
@@ -199,7 +190,7 @@ export const Header: React.FC<HeaderProps> = ({
       >
         <Text wrap="truncate-end">
           <Text bold color={theme.text.accent}>
-            {customBannerTitle ? customBannerTitle : '> Bald Puppy'}
+            {customBannerTitle ? customBannerTitle : `> ${TERMINAL_APP_NAME}`}
           </Text>
           <Text color={theme.text.secondary}> ({versionLabel})</Text>
         </Text>
@@ -211,13 +202,10 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Auth and Model line */}
         <Text wrap="truncate-end">
           <Text color={theme.text.secondary}>{authModelText}</Text>
-          {showModelHint && (
-            <Text color={theme.text.secondary}>{modelHintText}</Text>
-          )}
         </Text>
         {/* Directory line */}
         <Text wrap="truncate-end" color={theme.text.secondary}>
-          {displayPath}
+          cwd: {displayPath}
         </Text>
       </Box>
     </Box>

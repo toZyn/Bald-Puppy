@@ -30,7 +30,7 @@ const qwenDarkColors: ColorsTheme = {
 const baldPuppySemanticColors: SemanticColors = {
   text: {
     primary: '#ffffff',
-    secondary: '#999999',
+    secondary: '#cccccc',
     link: '#6699cc',
     accent: '#d4a054',
     code: '#66cccc',
@@ -39,10 +39,11 @@ const baldPuppySemanticColors: SemanticColors = {
     primary: '#212823',
     diff: { added: '#203520', removed: '#3b2020' },
   },
-  border: { default: '#555555', focused: '#d4a054' },
+  border: { default: '#383838', focused: '#d4a054' },
   ui: {
     comment: '#999999',
     symbol: '#888888',
+    tool: '#aa88cc',
     gradient: ['#d4a054', '#c49450'],
   },
   status: {

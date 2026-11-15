@@ -121,15 +121,17 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
       : null;
 
   return (
-    <Box paddingLeft={2} flexDirection="column">
+    <Box
+      paddingLeft={5}
+      flexDirection="column"
+      width="100%"
+      maxWidth={terminalWidth}
+      minWidth={0}
+    >
       {/* Main loading line */}
-      <Box
-        width="100%"
-        flexDirection={isNarrow ? 'column' : 'row'}
-        alignItems={isNarrow ? 'flex-start' : 'center'}
-      >
-        <Box>
-          <Box marginRight={1}>
+      <Box flexDirection="row" minWidth={0} alignItems="center">
+        <Box flexGrow={1} flexShrink={1} minWidth={0}>
+          <Box marginRight={1} flexShrink={0}>
             <RespondingSpinner
               nonRespondingDisplay={
                 streamingState === StreamingState.WaitingForConfirmation
@@ -139,16 +141,19 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
             />
           </Box>
           {primaryText && (
-            <Text color={theme.text.accent} wrap="truncate-end">
-              {primaryText}
-            </Text>
+            <Box flexGrow={1} flexShrink={1} minWidth={0}>
+              <Text color={theme.ui.comment} wrap="truncate-end">
+                {primaryText}
+              </Text>
+            </Box>
           )}
           {!isNarrow && cancelAndTimerContent && (
-            <Text color={theme.text.secondary}> {cancelAndTimerContent}</Text>
+            <Box flexShrink={0}>
+              <Text color={theme.text.secondary}> {cancelAndTimerContent}</Text>
+            </Box>
           )}
         </Box>
-        {!isNarrow && <Box flexGrow={1}>{/* Spacer */}</Box>}
-        {!isNarrow && rightContent && <Box>{rightContent}</Box>}
+        {!isNarrow && rightContent && <Box flexShrink={0}>{rightContent}</Box>}
       </Box>
       {isNarrow && cancelAndTimerContent && (
         <Box>

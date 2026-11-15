@@ -7,6 +7,10 @@
 // Chinese translations for Qwen Code CLI
 
 export default {
+  You: '你',
+  'Type a message...': '输入消息...',
+  '{{count}} turns': '{{count}} 轮',
+
   "You've used up your weekly credits.{{reset}} You can wait or run /upgrade to get more credits.":
     '周额度已用完{{reset}}。您可以等待额度恢复，或运行 /upgrade 升级套餐以获取更多额度。',
   "You've used up your weekly credits.{{reset}} Please try again after the reset.":

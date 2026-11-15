@@ -1563,8 +1563,10 @@ export const AppContainer = (props: AppContainerProps) => {
 
   // Derive widths for InputPrompt using shared helper
   const { inputWidth, suggestionsWidth } = useMemo(() => {
-    const { inputWidth, suggestionsWidth } =
-      calculatePromptWidths(terminalWidth);
+    const { inputWidth, suggestionsWidth } = calculatePromptWidths(
+      terminalWidth,
+      'inline',
+    );
     return { inputWidth, suggestionsWidth };
   }, [terminalWidth]);
   // Uniform width for bordered box components: accounts for margins and caps at 100
@@ -1730,19 +1732,28 @@ export const AppContainer = (props: AppContainerProps) => {
     });
   }, [config, useTerminalBuffer, terminalWidth]);
 
-  // The VP post-shrink clear window (terminal-resize-reflow) wipes one-shot
+  // The VP geometry-change clear window (terminal-resize-reflow) wipes one-shot
   // <Static> content from the viewport just like the wake path; pair it with
   // the same remount bump so keyed statics (agent tab history) re-emit. The
   // window's CLEAR_VIEWPORT substitutes wipe the just-re-emitted statics on
   // every in-window redraw, so bump again once the window closes.
-  const prevTerminalWidthRef = useRef(terminalWidth);
+  const prevTerminalSizeRef = useRef({
+    columns: terminalWidth,
+    rows: terminalHeight,
+  });
   const shrinkRemountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   useEffect(() => {
-    const prev = prevTerminalWidthRef.current;
-    prevTerminalWidthRef.current = terminalWidth;
-    if (useTerminalBuffer && terminalWidth < prev) {
+    const prev = prevTerminalSizeRef.current;
+    prevTerminalSizeRef.current = {
+      columns: terminalWidth,
+      rows: terminalHeight,
+    };
+    if (
+      useTerminalBuffer &&
+      (terminalWidth !== prev.columns || terminalHeight !== prev.rows)
+    ) {
       remountStaticHistory();
       if (shrinkRemountTimerRef.current) {
         clearTimeout(shrinkRemountTimerRef.current);
@@ -1751,7 +1762,7 @@ export const AppContainer = (props: AppContainerProps) => {
       // before the re-emit.
       shrinkRemountTimerRef.current = setTimeout(remountStaticHistory, 650);
     }
-  }, [terminalWidth, useTerminalBuffer, remountStaticHistory]);
+  }, [terminalWidth, terminalHeight, useTerminalBuffer, remountStaticHistory]);
   useEffect(
     () => () => {
       if (shrinkRemountTimerRef.current) {

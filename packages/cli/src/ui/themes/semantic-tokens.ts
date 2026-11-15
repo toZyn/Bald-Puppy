@@ -28,6 +28,7 @@ export interface SemanticColors {
   ui: {
     comment: string;
     symbol: string;
+    tool?: string;
     gradient: string[] | undefined;
   };
   status: {

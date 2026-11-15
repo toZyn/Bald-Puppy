@@ -79,13 +79,13 @@ setInterval(() => {}, 1000);`,
         args: [
           '-e',
           `console.log('Type your message');
-process.stdout.write('\\x1b[2;1H\\x1b[38;2;197;37;83mC\\x1b[2mD\\x1b[0mR');
+process.stdout.write('\\x1b[2;1H\\x1b[38;2;197;37;83m\\x1b[48;2;4;5;6mC\\x1b[2mD\\x1b[0mR');
 setInterval(() => {}, 1000);`,
         ],
       },
     });
     await session.idle(300);
-    const rows = await session.viewportCells();
+    const rows = await session.viewportCells({ includeBackground: true });
     expect(rows).toHaveLength(5);
     expect(rows[1].text).toBe('CDR');
     expect(rows[1].cells).toHaveLength(30);
@@ -93,12 +93,16 @@ setInterval(() => {}, 1000);`,
       text: 'C',
       fg: 0xc52553,
       rgb: true,
+      bg: 0x040506,
+      bgRgb: true,
       dim: false,
     });
     expect(rows[1].cells[1]).toEqual({
       text: 'D',
       fg: 0xc52553,
       rgb: true,
+      bg: 0x040506,
+      bgRgb: true,
       dim: true,
     });
     expect(rows[1].cells[2]).toMatchObject({

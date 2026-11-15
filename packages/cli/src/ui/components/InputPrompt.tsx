@@ -2409,10 +2409,10 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         )
       ) : commandSearchActive ? (
         <Text color={theme.text.accent}>(r:) </Text>
-      ) : approvalModePromptStyle ? (
-        approvalModePromptStyle.prefix
+      ) : approvalMode === ApprovalMode.YOLO ? (
+        '*'
       ) : (
-        '>'
+        '❯'
       )}{' '}
     </Text>
   );
@@ -2453,6 +2453,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         audioLevel={voiceInput.audioLevel}
       />
       <BaseTextInput
+        variant="inline"
         buffer={buffer}
         onSubmit={handleSubmitAndClear}
         onKeypress={handleInput}
@@ -2467,7 +2468,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         mouseEnabled={mouseInteractionsEnabled}
       />
       {shouldShowSuggestions && (
-        <Box marginLeft={2} marginRight={2}>
+        <Box marginLeft={5} marginRight={5}>
           <SuggestionsDisplay
             suggestions={suggestionDisplayProps.suggestions}
             activeIndex={suggestionDisplayProps.activeIndex}

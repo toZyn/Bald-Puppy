@@ -90,6 +90,14 @@ const renderWithProviders = (
 };
 
 describe('<AppHeader />', () => {
+  it('keeps startup quiet when tips have not been explicitly requested', () => {
+    const settings = createSettings();
+    delete settings.merged.ui!.hideTips;
+    const ui = renderWithProviders(createMockUIState(), settings);
+    expect(ui.lastFrame()).not.toContain('Tips:');
+    ui.unmount();
+  });
+
   it('keeps the selected executor model while an advisor runtime is active', () => {
     const getModelDisplayName = vi.fn((model: string) => model);
     const { lastFrame } = renderWithProviders(
@@ -206,7 +214,7 @@ describe('<AppHeader />', () => {
 
   it('shows the header with all info when banner is visible', () => {
     const { lastFrame } = renderWithProviders(createMockUIState());
-    expect(lastFrame()).toContain('>_ Qwen Code');
+    expect(lastFrame()).toContain('> Bald Puppy');
     expect(lastFrame()).toContain('Gemini Pro');
     expect(lastFrame()).toContain('/projects/qwen-code');
   });
@@ -216,7 +224,7 @@ describe('<AppHeader />', () => {
       createMockUIState(),
       createSettings({ hideTips: false, hideBanner: true }),
     );
-    expect(lastFrame()).not.toContain('>_ Qwen Code');
+    expect(lastFrame()).not.toContain('> Bald Puppy');
     expect(lastFrame()).not.toContain('██╔═══██╗');
   });
 
@@ -246,7 +254,7 @@ describe('<AppHeader />', () => {
     );
     const frame = lastFrame() ?? '';
     expect(frame).toContain('Acme CLI');
-    expect(frame).not.toContain('>_ Qwen Code');
+    expect(frame).not.toContain('> Bald Puppy');
     expect(frame).toContain('ACME');
     // Default Qwen logo must NOT bleed through when the user supplied art.
     expect(frame).not.toContain('██╔═══██╗');

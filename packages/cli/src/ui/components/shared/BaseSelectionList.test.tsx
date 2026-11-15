@@ -20,7 +20,11 @@ import type { theme } from '../../semantic-colors.js';
 vi.mock('../../hooks/useSelectionList.js');
 
 const mockTheme = {
-  text: { primary: 'COLOR_PRIMARY', secondary: 'COLOR_SECONDARY' },
+  text: {
+    primary: 'COLOR_PRIMARY',
+    secondary: 'COLOR_SECONDARY',
+    accent: 'COLOR_ACCENT',
+  },
   status: { success: 'COLOR_SUCCESS' },
 } as typeof theme;
 
@@ -36,7 +40,11 @@ const renderSelectionList = (
 
 vi.mock('../../semantic-colors.js', () => ({
   theme: {
-    text: { primary: 'COLOR_PRIMARY', secondary: 'COLOR_SECONDARY' },
+    text: {
+      primary: 'COLOR_PRIMARY',
+      secondary: 'COLOR_SECONDARY',
+      accent: 'COLOR_ACCENT',
+    },
     status: { success: 'COLOR_SUCCESS' },
   },
 }));
@@ -105,12 +113,12 @@ describe('BaseSelectionList', () => {
       expect(mockRenderItem).toHaveBeenCalledWith(items[0], expect.any(Object));
     });
 
-    it('should render the selection indicator (› or space) and layout', () => {
+    it('should render the selection indicator (▸ or space) and layout', () => {
       const { lastFrame } = renderComponent({}, 0);
       const output = lastFrame();
 
       // Use regex to assert the structure: Indicator + Whitespace + Number + Label
-      expect(output).toMatch(/›\s+1\.\s+Item A/);
+      expect(output).toMatch(/▸\s+1\.\s+Item A/);
       expect(output).toMatch(/\s+2\.\s+Item B/);
       expect(output).toMatch(/\s+3\.\s+Item C/);
     });
@@ -155,15 +163,15 @@ describe('BaseSelectionList', () => {
   });
 
   describe('Styling and Colors', () => {
-    it('should apply success color to the selected item', () => {
+    it('should apply accent color to the selected item', () => {
       renderComponent({}, 0); // Item A selected
 
       // Check renderItem context colors against the mocked theme
       expect(mockRenderItem).toHaveBeenCalledWith(
         items[0],
         expect.objectContaining({
-          titleColor: mockTheme.status.success,
-          numberColor: mockTheme.status.success,
+          titleColor: mockTheme.text.accent,
+          numberColor: mockTheme.text.accent,
           isSelected: true,
         }),
       );
@@ -197,7 +205,7 @@ describe('BaseSelectionList', () => {
       );
     });
 
-    it('should apply success color to disabled items if they are selected', () => {
+    it('should apply accent color to disabled items if they are selected', () => {
       // The component should visually reflect the selection even if the item is disabled.
       renderComponent({}, 1); // Item B (disabled) selected
 
@@ -205,8 +213,8 @@ describe('BaseSelectionList', () => {
       expect(mockRenderItem).toHaveBeenCalledWith(
         items[1],
         expect.objectContaining({
-          titleColor: mockTheme.status.success,
-          numberColor: mockTheme.status.success,
+          titleColor: mockTheme.text.accent,
+          numberColor: mockTheme.text.accent,
           isSelected: true,
         }),
       );
@@ -259,7 +267,7 @@ describe('BaseSelectionList', () => {
         items[0],
         expect.objectContaining({
           isSelected: true,
-          titleColor: mockTheme.status.success,
+          titleColor: mockTheme.text.accent,
           numberColor: mockTheme.text.secondary,
         }),
       );

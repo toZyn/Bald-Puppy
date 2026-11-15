@@ -15,7 +15,19 @@
  * (including border + padding + prefix), the suggestions dropdown width,
  * and the frame overhead constant.
  */
-export const calculatePromptWidths = (terminalWidth: number) => {
+export const calculatePromptWidths = (
+  terminalWidth: number,
+  variant: 'framed' | 'inline' = 'framed',
+) => {
+  if (variant === 'inline') {
+    const overhead = 8;
+    return {
+      inputWidth: Math.max(1, terminalWidth - overhead),
+      containerWidth: Math.max(overhead + 1, terminalWidth),
+      suggestionsWidth: Math.max(1, terminalWidth - 10),
+      frameOverhead: overhead,
+    };
+  }
   const widthFraction = 0.9;
   const FRAME_PADDING_AND_BORDER = 4; // Border (2) + padding (2)
   const PROMPT_PREFIX_WIDTH = 2; // '> ' or '! '

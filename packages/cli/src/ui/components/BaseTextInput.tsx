@@ -87,6 +87,7 @@ export interface BaseTextInputProps {
   renderLine?: (opts: RenderLineOptions) => ReactNode;
   /** Enable click-to-position-cursor (alternate-screen / ui.useTerminalBuffer mode). */
   mouseEnabled?: boolean;
+  variant?: 'framed' | 'inline';
 }
 
 // ─── Default line renderer ──────────────────────────────────
@@ -140,6 +141,7 @@ export type PhysicalCursorState = {
   scrollVisualRow: number;
   linesToRender: string[];
   prefixWidth: number;
+  contentOffsetY?: number;
 };
 
 export function getAbsolutePosition(
@@ -173,6 +175,7 @@ export function getPhysicalCursorPosition(
     scrollVisualRow,
     linesToRender,
     prefixWidth,
+    contentOffsetY = 1,
   }: PhysicalCursorState,
 ): { x: number; y: number } | undefined {
   if (!showCursor || !hasMeasured) return undefined;
@@ -189,7 +192,7 @@ export function getPhysicalCursorPosition(
       return getAbsolutePosition(node)!.left + prefixWidth + physicalCol;
     },
     get y() {
-      return getAbsolutePosition(node)!.top + relativeRow + 1;
+      return getAbsolutePosition(node)!.top + relativeRow + contentOffsetY;
     },
   };
 }
@@ -209,6 +212,7 @@ export const BaseTextInput = ({
   isActive = true,
   renderLine = defaultRenderLine,
   mouseEnabled = false,
+  variant = 'framed',
 }: BaseTextInputProps): ReactNode => {
   // ── Keyboard handling ──
 
@@ -323,6 +327,26 @@ export const BaseTextInput = ({
   const [cursorVisualRow, cursorVisualCol] = buffer.visualCursor;
   const scrollVisualRow = buffer.visualScrollRow;
 
+  const inline = variant === 'inline';
+  const columns = process.stdout.columns || 80;
+  // Build the top border line: ─────── label ──
+  // Reserve the label decoration and at least one leading dash.
+  const labelBudget = inline
+    ? Math.max(0, columns - 6)
+    : columns -
+      TOP_BORDER_LABEL_DECORATION_WIDTH -
+      TOP_BORDER_MIN_LEADING_DASHES;
+  const renderedLabel = topRightLabel
+    ? truncateToWidth(topRightLabel, labelBudget)
+    : '';
+  const labelWidth = renderedLabel
+    ? stringWidth(renderedLabel) + TOP_BORDER_LABEL_DECORATION_WIDTH
+    : 0;
+  const dashCount = columns - labelWidth;
+  const topBorderLine = renderedLabel
+    ? `${'─'.repeat(dashCount)} ${renderedLabel} ${'─'.repeat(2)}`
+    : '─'.repeat(columns);
+
   // ── Physical cursor positioning for IME ──
   const boxRef = useRef<DOMElement | null>(null);
   const linesRef = useRef<DOMElement | null>(null);
@@ -336,6 +360,7 @@ export const BaseTextInput = ({
     scrollVisualRow,
     linesToRender,
     prefixWidth,
+    contentOffsetY: inline ? (renderedLabel ? 1 : 0) : 1,
   });
   // Ink snapshots this value in its insertion effect, so it must be set
   // during render rather than from another effect.
@@ -346,24 +371,8 @@ export const BaseTextInput = ({
     <Text color={theme.text.accent}>{'> '}</Text>
   );
 
-  const columns = process.stdout.columns || 80;
-  // Build the top border line: ─────── label ──
-  // Reserve the label decoration and at least one leading dash.
-  const labelBudget =
-    columns - TOP_BORDER_LABEL_DECORATION_WIDTH - TOP_BORDER_MIN_LEADING_DASHES;
-  const renderedLabel = topRightLabel
-    ? truncateToWidth(topRightLabel, labelBudget)
-    : '';
-  const labelWidth = renderedLabel
-    ? stringWidth(renderedLabel) + TOP_BORDER_LABEL_DECORATION_WIDTH
-    : 0;
-  const dashCount = columns - labelWidth;
-  const topBorderLine = renderedLabel
-    ? `${'─'.repeat(dashCount)} ${renderedLabel} ${'─'.repeat(2)}`
-    : '─'.repeat(columns);
-
   return (
-    <Box ref={boxRef} flexDirection="column">
+    <Box ref={boxRef} flexDirection="column" marginX={inline ? 3 : 0}>
       {mouseEnabled && isActive && (
         <TextInputMouseController
           linesRef={linesRef}
@@ -371,13 +380,21 @@ export const BaseTextInput = ({
           visibleLineCount={linesToRender.length}
         />
       )}
-      <Text color={resolvedBorderColor} wrap="truncate-end">
-        {topBorderLine}
-      </Text>
+      {inline ? (
+        renderedLabel && (
+          <Text color={theme.ui.comment} wrap="truncate-end">
+            {renderedLabel}
+          </Text>
+        )
+      ) : (
+        <Text color={resolvedBorderColor} wrap="truncate-end">
+          {topBorderLine}
+        </Text>
+      )}
       <Box
-        borderStyle="single"
+        borderStyle={inline ? undefined : 'single'}
         borderTop={false}
-        borderBottom={true}
+        borderBottom={!inline}
         borderLeft={false}
         borderRight={false}
         borderColor={resolvedBorderColor}
@@ -385,7 +402,7 @@ export const BaseTextInput = ({
         {resolvedPrefix}
         {/* No background fill: the input area blends into the terminal's own
             background so it stays consistent across terminals and themes. */}
-        <Box flexGrow={1} flexDirection="column" ref={linesRef}>
+        <Box flexGrow={1} minWidth={0} flexDirection="column" ref={linesRef}>
           {buffer.text.length === 0 && placeholder ? (
             showCursor ? (
               <Text>

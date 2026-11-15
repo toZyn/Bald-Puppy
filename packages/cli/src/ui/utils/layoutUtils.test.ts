@@ -24,6 +24,16 @@ describe('layoutUtils', () => {
     });
   });
 
+  it('uses the actual unboxed prompt and suggestion gutters at mobile widths', () => {
+    expect(calculatePromptWidths(40, 'inline')).toEqual({
+      inputWidth: 32,
+      containerWidth: 40,
+      suggestionsWidth: 30,
+      frameOverhead: 8,
+    });
+    expect(calculatePromptWidths(80, 'inline').inputWidth).toBe(72);
+  });
+
   it('reserves static chrome and a bottom safety margin for dialog height', () => {
     expect(getDialogMaxHeight(24, STATIC_EXTRA_HEIGHT)).toBe(19);
   });

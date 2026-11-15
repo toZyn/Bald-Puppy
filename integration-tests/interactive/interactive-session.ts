@@ -72,6 +72,8 @@ export async function sendAboutUntilRendered(
 }
 
 export interface InteractiveSessionOptions {
+  /** Prompt marker override for isolated fixtures. Defaults to supported CLI prompts. */
+  readyText?: string | readonly string[];
   /** Terminal columns, default 100 */
   cols?: number;
   /** Terminal rows, default 40 */
@@ -222,7 +224,14 @@ export class InteractiveSession {
     });
     try {
       await Promise.race([
-        session.waitFor('Type your message', readyPromptBudgetMs(process.env)),
+        session.waitFor(
+          options?.readyText ?? [
+            'Type your message',
+            'Type a message...',
+            'Type your request, or /usage',
+          ],
+          readyPromptBudgetMs(process.env),
+        ),
         exited,
       ]);
       startupUndecided = false;
@@ -261,11 +270,17 @@ export class InteractiveSession {
   }
 
   /** Wait for text to appear in raw output. */
-  async waitFor(text: string, timeout = 120_000): Promise<void> {
+  async waitFor(
+    text: string | readonly string[],
+    timeout = 120_000,
+  ): Promise<void> {
+    const alternatives = typeof text === 'string' ? [text] : text;
     const start = Date.now();
     while (!this.closed && Date.now() - start < timeout) {
       if (
-        stripAnsi(this.rawOutput).toLowerCase().includes(text.toLowerCase())
+        alternatives.some((value) =>
+          stripAnsi(this.rawOutput).toLowerCase().includes(value.toLowerCase()),
+        )
       ) {
         return;
       }
@@ -329,7 +344,7 @@ export class InteractiveSession {
     ).join('\n');
   }
 
-  async viewportCells() {
+  async viewportCells(options: { includeBackground?: boolean } = {}) {
     await this.flush();
     const buffer = this.terminal.buffer.active;
     return Array.from({ length: this.terminal.rows }, (_, row) => {
@@ -344,6 +359,9 @@ export class InteractiveSession {
                 fg: cell.getFgColor(),
                 rgb: cell.isFgRGB(),
                 dim: Boolean(cell.isDim()),
+                ...(options.includeBackground
+                  ? { bg: cell.getBgColor(), bgRgb: cell.isBgRGB() }
+                  : {}),
               }
             : null;
         }),

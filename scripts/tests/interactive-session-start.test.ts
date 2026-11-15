@@ -35,7 +35,7 @@ describe('InteractiveSession.start source pins (#13552)', () => {
     // sits one token short of printWidth, so the pattern must also match the
     // trailing-comma multi-line form a reflow emits.
     expect(source).toMatch(
-      /session\.waitFor\(\s*'Type your message',\s*readyPromptBudgetMs\(process\.env\),?\s*\)/,
+      /session\.waitFor\([\s\S]*?readyPromptBudgetMs\(process\.env\),?\s*\)/,
     );
   });
 

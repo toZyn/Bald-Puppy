@@ -8,6 +8,10 @@
 // Ключ служит одновременно ключом перевода и текстом по умолчанию
 
 export default {
+  You: 'Вы',
+  'Type a message...': 'Введите сообщение...',
+  '{{count}} turns': '{{count}} ходов',
+
   'Generated UI': 'Generated UI',
   'Enable bundled Generated UI in supported local sessions. Restart the owning session to apply changes.':
     'Включает встроенный Generated UI в поддерживаемых локальных сеансах. Перезапустите соответствующий сеанс, чтобы применить изменения.',

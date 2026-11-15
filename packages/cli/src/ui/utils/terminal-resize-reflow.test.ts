@@ -56,6 +56,44 @@ describe('installTerminalResizeReflow', () => {
     vi.unstubAllEnvs();
   });
 
+  it.each([12, 50])(
+    'clears the VP after a height-only resize to %i rows',
+    (rows) => {
+      const stdout = new FakeStdout();
+      const { restore } = installTerminalResizeReflow(
+        stdout as unknown as NodeJS.WriteStream,
+        { virtualViewport: true },
+      );
+      try {
+        stdout.write(eraseLines(10) + frame(60, 10));
+        stdout.rows = rows;
+        stdout.emit('resize');
+        stdout.write(eraseLines(10) + frame(60, 10));
+        expect(stdout.written.at(-1)).toBe(`${ESC}2J${ESC}H` + frame(60, 10));
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  it('never replays a frame built for a different terminal height after wake', () => {
+    const stdout = new FakeStdout();
+    const { restore, repaint } = installTerminalResizeReflow(
+      stdout as unknown as NodeJS.WriteStream,
+      { virtualViewport: true },
+    );
+    try {
+      stdout.write(eraseLines(10) + frame(60, 10));
+      stdout.rows = 12;
+      stdout.emit('resize');
+      stdout.written.length = 0;
+      repaint!();
+      expect(stdout.written).toEqual([`${ESC}2J${ESC}H`]);
+    } finally {
+      restore();
+    }
+  });
+
   it('amplifies the post-shrink erase to the reflowed frame height', () => {
     const stdout = new FakeStdout();
     const { restore } = installTerminalResizeReflow(
