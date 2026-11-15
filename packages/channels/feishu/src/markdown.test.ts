@@ -1,0 +1,443 @@
+import { describe, it, expect } from 'vitest';
+import {
+  buildCardContent,
+  extractTitle,
+  splitByTables,
+  splitChunks,
+} from './markdown.js';
+
+interface CardElement {
+  tag: string;
+  content?: string;
+  value?: Record<string, unknown>;
+  elements?: CardElement[];
+}
+
+interface CardStructure {
+  schema: string;
+  header?: { title: { content: string }; template: string };
+  body: { elements: CardElement[] };
+}
+
+describe('Feishu markdown utilities', () => {
+  describe('table splitting around code fences', () => {
+    const table = '| A | B |\n| --- | --- |\n| 1 | 2 |';
+
+    it.each(['```', '~~~', '````', '~~~~'])(
+      'keeps %s code intact between real tables',
+      (fence) => {
+        const code = `${fence}text\n${table}\n${fence}`;
+        expect(splitByTables(`${table}\n${code}\n${table}`)).toEqual([
+          table,
+          code,
+          table,
+        ]);
+        const card = buildCardContent(code) as unknown as CardStructure;
+        expect(card.body.elements).toEqual([
+          { tag: 'markdown', content: code },
+        ]);
+      },
+    );
+
+    it('does not treat inline triple backticks as an opening fence', () => {
+      expect(splitByTables(`Use \`\`\` literally.\n${table}\nAfter`)).toEqual([
+        'Use ``` literally.',
+        table,
+        'After',
+      ]);
+    });
+
+    it('closes only with the same fence marker and sufficient length', () => {
+      const code = ['````markdown', '```', '~~~', table, '`````'].join('\n');
+      expect(splitByTables(`${code}\n${table}`)).toEqual([code, table]);
+    });
+
+    it('does not close a tilde fence with equally long backticks', () => {
+      const code = ['~~~text', '```', table, '~~~'].join('\n');
+      expect(splitByTables(`${code}\n${table}`)).toEqual([code, table]);
+    });
+
+    it('rejects backticks in a backtick fence info string', () => {
+      const prose = '```invalid`info';
+      expect(splitByTables(`${prose}\n${table}\nAfter`)).toEqual([
+        prose,
+        table,
+        'After',
+      ]);
+    });
+
+    it.each([
+      { indent: '    ', fence: '```' },
+      { indent: '\t', fence: '```' },
+      { indent: '    ', fence: '~~~' },
+      { indent: '\t', fence: '~~~' },
+    ])(
+      'preserves nested $fence fences with $indent indentation',
+      ({ indent, fence }) => {
+        const code = [
+          '- item',
+          `${indent}${fence}text`,
+          ...table.split('\n').map((line) => `${indent}${line}`),
+          `${indent}${fence}`,
+        ].join('\n');
+        expect(splitByTables(`${code}\n${table}`)).toEqual([code, table]);
+        const card = buildCardContent(code) as unknown as CardStructure;
+        expect(card.body.elements).toEqual([
+          { tag: 'markdown', content: code },
+        ]);
+      },
+    );
+
+    it('accepts indentation spaces and closing whitespace', () => {
+      const code = `   ~~~text\n${table}\n   ~~~~  `;
+      expect(splitByTables(`${code}\n${table}`)).toEqual([code, table]);
+    });
+
+    it.each(['```', '~~~'])(
+      'does not close a %s fence with trailing text',
+      (fence) => {
+        const code = [fence, `${fence} still code`, table, fence].join('\n');
+        expect(splitByTables(`${code}\n${table}`)).toEqual([code, table]);
+      },
+    );
+
+    it.each(
+      [
+        '- ',
+        '* ',
+        '+ ',
+        '1. ',
+        '2) ',
+        '\t-\t',
+        '- 1. ',
+        '- [ ] ',
+        '- [x] ',
+        '- [X] ',
+        '- [\t] ',
+        '* [ ] ',
+        '+ [x] ',
+        '1. [ ] ',
+        '2) [X] ',
+        '- [ ] - [x] ',
+      ].flatMap((prefix) => ['```', '~~~'].map((fence) => ({ prefix, fence }))),
+    )(
+      'preserves $prefix / $fence list fences between tables',
+      ({ prefix, fence }) => {
+        const indent = ' '.repeat(prefix.replaceAll('\t', '    ').length);
+        const code = [
+          `${prefix}${fence}text`,
+          ...table.split('\n').map((line) => `${indent}${line}`),
+          `${indent}${fence}`,
+        ].join('\n');
+        const markdown = `${table}\n${code}\n${table}\nAfter`;
+        const segments = [table, code, table, 'After'];
+        expect(splitByTables(markdown)).toEqual(segments);
+        const card = buildCardContent(markdown) as unknown as CardStructure;
+        expect(card.body.elements).toEqual(
+          segments.map((content) => ({ tag: 'markdown', content })),
+        );
+      },
+    );
+
+    it.each(
+      ['- ', '- [ ] ', '1. [X] '].flatMap((prefix) =>
+        ['```', '~~~'].map((fence) => ({ prefix, fence })),
+      ),
+    )(
+      'does not close a $fence fence on a $prefix literal delimiter',
+      ({ prefix, fence }) => {
+        const code = [fence, `${prefix}${fence}`, table, fence].join('\n');
+        expect(splitByTables(`${code}\n${table}`)).toEqual([code, table]);
+      },
+    );
+
+    it.each([
+      '- Use ``` literally.',
+      '1. ```invalid`info',
+      '-```',
+      '1234567890. ```',
+      '- [ ] Use ``` literally.',
+      '- [x] ```invalid`info',
+      '- [  ] ```',
+      '- [✓] ```',
+      '- [x]```',
+      '[x] ```',
+    ])('does not open a fence from %s', (prose) => {
+      expect(splitByTables(`${prose}\n${table}\nAfter`)).toEqual([
+        prose,
+        table,
+        'After',
+      ]);
+    });
+
+    it.each(['```', '~~~'])(
+      'preserves %s fences and table-like text with CRLF line endings',
+      (fence) => {
+        const code = `${fence}text\r\n${table.replaceAll('\n', '\r\n')}\r\n${fence}\r`;
+        expect(splitByTables(code)).toEqual([code]);
+        const card = buildCardContent(code) as unknown as CardStructure;
+        expect(card.body.elements).toEqual([
+          { tag: 'markdown', content: code },
+        ]);
+      },
+    );
+
+    it('recognizes a closing fence before a table with mixed line endings', () => {
+      const code = `~~~text\r\n${table}\n~~~\r`;
+      expect(splitByTables(`${code}\n${table}\nAfter`)).toEqual([
+        code,
+        table,
+        'After',
+      ]);
+    });
+  });
+
+  describe('buildCardContent', () => {
+    it('returns a valid card structure', () => {
+      const card = buildCardContent('Hello world') as unknown as CardStructure;
+      expect(card.schema).toBe('2.0');
+      expect(card.body.elements).toBeDefined();
+      expect(card.body.elements[0]!.tag).toBe('markdown');
+      expect(card.body.elements[0]!.content).toBe('Hello world');
+    });
+
+    it('adds streaming indicator when isStreaming is true', () => {
+      const card = buildCardContent('text', {
+        isStreaming: true,
+      }) as unknown as CardStructure;
+      expect(card.body.elements[0]!.content).toContain('生成中...');
+    });
+
+    it('uses a custom running status label', () => {
+      const card = buildCardContent('text', {
+        isStreaming: true,
+        statusLabel: '运行中...',
+      }) as unknown as CardStructure;
+
+      expect(card.body.elements[0]!.content).toContain('运行中...');
+      expect(card.body.elements[0]!.content).not.toContain('生成中...');
+    });
+
+    it('uses a terminal status label without enabling streaming controls', () => {
+      const card = buildCardContent('text', {
+        statusLabel: '已完成',
+      }) as unknown as CardStructure;
+
+      expect(card.body.elements[0]!.content).toContain('已完成');
+      expect(card.body.elements.some((e) => e.tag === 'button')).toBe(false);
+    });
+
+    it('adds stop button when showStopButton is true', () => {
+      const card = buildCardContent('text', {
+        showStopButton: true,
+      }) as unknown as CardStructure;
+      const button = card.body.elements.find((e) => e.tag === 'button');
+      expect(button).toBeDefined();
+      expect(button!.value).toEqual({ action: 'stop' });
+    });
+
+    it('sets header with title', () => {
+      const card = buildCardContent('text', {
+        title: 'My Title',
+      }) as unknown as CardStructure;
+      expect(card.header!.title.content).toBe('My Title');
+      expect(card.header!.template).toBe('green');
+    });
+
+    it('sets blue header when streaming', () => {
+      const card = buildCardContent('text', {
+        title: 'Title',
+        isStreaming: true,
+      }) as unknown as CardStructure;
+      expect(card.header!.template).toBe('blue');
+      expect(card.header!.title.content).toBe('Title ...');
+    });
+
+    it('uses collapsible panel for long content when enabled', () => {
+      const longText = 'a'.repeat(600);
+      const card = buildCardContent(longText, {
+        collapsible: true,
+        collapsibleThreshold: 500,
+      }) as unknown as CardStructure;
+      const panel = card.body.elements.find(
+        (e) => e.tag === 'collapsible_panel',
+      );
+      expect(panel).toBeDefined();
+    });
+
+    it('keeps terminal status label visible in long collapsible content', () => {
+      const longText = 'a '.repeat(320);
+      const card = buildCardContent(longText, {
+        collapsible: true,
+        collapsibleThreshold: 500,
+        statusLabel: '已完成',
+      }) as unknown as CardStructure;
+      const panel = card.body.elements.find(
+        (e) => e.tag === 'collapsible_panel',
+      );
+
+      expect(panel).toBeDefined();
+      expect(card.body.elements[0]!.content).toContain('已完成');
+      expect(panel?.elements?.[0]?.content).not.toContain('已完成');
+    });
+
+    it('does not use collapsible for short content', () => {
+      const card = buildCardContent('short', {
+        collapsible: true,
+        collapsibleThreshold: 500,
+      }) as unknown as CardStructure;
+      const panel = card.body.elements.find(
+        (e) => e.tag === 'collapsible_panel',
+      );
+      expect(panel).toBeUndefined();
+    });
+  });
+
+  describe('extractTitle', () => {
+    it('extracts title from first line', () => {
+      expect(extractTitle('Hello World\nmore text')).toBe('Hello World');
+    });
+
+    it('strips markdown heading markers', () => {
+      expect(extractTitle('## My Title\ncontent')).toBe('My Title');
+    });
+
+    it('strips bold/list markers', () => {
+      expect(extractTitle('* Item one')).toBe('Item one');
+      expect(extractTitle('> Quote text')).toBe('Quote text');
+    });
+
+    it('truncates to 20 chars', () => {
+      expect(
+        extractTitle('This is a very long title that should be truncated')
+          .length,
+      ).toBeLessThanOrEqual(20);
+    });
+
+    it('returns default for empty text', () => {
+      expect(extractTitle('')).toBe('Qwen Code');
+      expect(extractTitle('###')).toBe('Qwen Code');
+    });
+  });
+
+  describe('splitChunks', () => {
+    it('returns single chunk for short text', () => {
+      expect(splitChunks('short text')).toEqual(['short text']);
+    });
+
+    it('returns single chunk for empty text', () => {
+      expect(splitChunks('')).toEqual(['']);
+    });
+
+    it('rejects a code-fence limit that cannot make progress', () => {
+      expect(() => splitChunks('```\nabc\n```', 4)).toThrow(RangeError);
+    });
+
+    it('splits long text into chunks', () => {
+      const line = 'a'.repeat(100) + '\n';
+      const text = line.repeat(50); // 5050 chars > 4000
+      const chunks = splitChunks(text);
+      expect(chunks.length).toBeGreaterThan(1);
+      chunks.forEach((chunk) => {
+        expect(chunk.length).toBeLessThanOrEqual(4000);
+      });
+    });
+
+    it('closes and reopens code fences across boundaries', () => {
+      const longCode = '```\n' + 'x\n'.repeat(2500) + '```';
+      const chunks = splitChunks(longCode);
+      expect(chunks.length).toBeGreaterThan(1);
+      expect(chunks[0]).toContain('```');
+      if (chunks.length > 1) {
+        expect(chunks[1]!.trimStart().startsWith('```')).toBe(true);
+      }
+    });
+
+    it('hard-splits a single line exceeding CHUNK_LIMIT', () => {
+      const longLine = 'a'.repeat(5000);
+      const chunks = splitChunks(longLine);
+      expect(chunks.length).toBe(2);
+      expect(chunks[0]!.length).toBe(4000);
+      expect(chunks[1]!.length).toBe(1000);
+    });
+
+    it('does not split surrogate pairs at an odd chunk boundary', () => {
+      const text = '😀'.repeat(2500);
+      const chunks = splitChunks(text, 3999);
+
+      expect(chunks.join('')).toBe(text);
+      chunks.forEach((chunk) => {
+        expect(chunk.length).toBeLessThanOrEqual(3999);
+        const last = chunk.charCodeAt(chunk.length - 1);
+        const first = chunk.charCodeAt(0);
+        expect(last < 0xd800 || last > 0xdbff).toBe(true);
+        expect(first < 0xdc00 || first > 0xdfff).toBe(true);
+      });
+    });
+
+    it('accounts for the closing fence when a code line lands near the limit', () => {
+      // 3993 puts the buffer at CHUNK_LIMIT - 3 once the opening fence and
+      // newline are counted, so appending the closing fence overshot by one.
+      const longCode = '```\n' + 'x'.repeat(3993) + '\n```';
+      const chunks = splitChunks(longCode);
+      chunks.forEach((chunk) => {
+        expect(chunk.length).toBeLessThanOrEqual(4000);
+      });
+    });
+
+    it('reserves room for the closing fence on the line that opens a block', () => {
+      // The opening fence arrives while `inCode` is still false, so the reserve
+      // has to look at the fence state this line produces, not the one it found.
+      const text = 'a'.repeat(3991) + '\n```js\n' + 'z'.repeat(500) + '\n```';
+      const chunks = splitChunks(text);
+      chunks.forEach((chunk) => {
+        expect(chunk.length).toBeLessThanOrEqual(4000);
+      });
+    });
+
+    it('keeps every code character when splitting near the limit', () => {
+      // Passes both before and after the fence-reserve fix, on purpose: the
+      // chunks were oversized, not lossy. It pins the other half of the
+      // contract so shrinking a chunk can never be achieved by dropping code.
+      const body = 'x'.repeat(3993);
+      const chunks = splitChunks('```\n' + body + '\n```');
+      const recovered = chunks
+        .join('\n')
+        .split('\n')
+        .filter((l) => !l.startsWith('```'))
+        .join('');
+      expect(recovered).toBe(body);
+    });
+  });
+
+  describe('buildCardContent table splitting', () => {
+    it('splits table and following content into separate elements', () => {
+      const md = [
+        'Before table',
+        '| A | B |',
+        '| --- | --- |',
+        '| 1 | 2 |',
+        'After table',
+      ].join('\n');
+      const card = buildCardContent(md) as unknown as CardStructure;
+      const mdElements = card.body.elements.filter((e) => e.tag === 'markdown');
+      expect(mdElements.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('keeps content without tables in one element', () => {
+      const md = 'Hello\nWorld\nNo tables here';
+      const card = buildCardContent(md) as unknown as CardStructure;
+      const mdElements = card.body.elements.filter((e) => e.tag === 'markdown');
+      expect(mdElements.length).toBe(1);
+    });
+
+    it('does not split tables inside code fences', () => {
+      const md = ['```', '| A | B |', '| --- | --- |', '| 1 | 2 |', '```'].join(
+        '\n',
+      );
+      const card = buildCardContent(md) as unknown as CardStructure;
+      const mdElements = card.body.elements.filter((e) => e.tag === 'markdown');
+      expect(mdElements.length).toBe(1);
+    });
+  });
+});
