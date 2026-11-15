@@ -7,10 +7,7 @@
 import type React from 'react';
 import { Box, Text } from 'ink';
 import Gradient from 'ink-gradient';
-import {
-  shortenPath,
-  tildeifyPath,
-} from '@qwen-code/qwen-code-core/utils/paths.js';
+import { tildeifyPath } from '@qwen-code/qwen-code-core/utils/paths.js';
 import { theme } from '../semantic-colors.js';
 import {
   getAsciiArtWidth,
@@ -159,8 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   // Now shorten the path to fit the available space
   const tildeifiedPath = tildeifyPath(workingDirectory);
-  const shortenedPath = shortenPath(tildeifiedPath, Math.max(3, maxPathLength));
-  const displayPath = truncateToWidth(shortenedPath, maxPathLength);
+  const displayPath = truncateToWidth(tildeifiedPath, maxPathLength);
 
   const gradientColors = getRenderableGradientColors(theme.ui.gradient, [
     theme.text.secondary,
@@ -192,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
         </>
       )}
 
-      {/* Right side: Info panel (flexible width, max 60 in two-column layout) */}
+      {/* Right side: Info panel (flexible width, max 72 columns) */}
       <Box
         flexDirection="column"
         borderStyle="single"

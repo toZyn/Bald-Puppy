@@ -57,11 +57,14 @@ describe('<Header />', () => {
         <Header
           {...defaultProps}
           model={'very-long-model-'.repeat(12)}
-          workingDirectory={'/项目/🎵/'.repeat(20)}
+          workingDirectory={'/' + '🎵'.repeat(60)}
         />,
       );
-      for (const line of (ui.lastFrame() ?? '').split('\n'))
+      for (const line of (ui.lastFrame() ?? '').split('\n')) {
         expect(getCachedStringWidth(line)).toBeLessThanOrEqual(columns);
+        expect(line).not.toMatch(/[\uD800-\uDFFF]/u);
+        expect(line).not.toContain('�');
+      }
       useTerminalSizeMock.mockReturnValue({ columns: 20, rows: 24 });
       ui.rerender(<Header {...defaultProps} model="next-model" />);
       for (const line of (ui.lastFrame() ?? '').split('\n'))

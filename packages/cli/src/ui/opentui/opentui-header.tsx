@@ -21,10 +21,7 @@ import { useTerminalDimensions } from '@opentui/react';
 import type { Config } from '@qwen-code/qwen-code-core';
 import { findProviderByCredentials } from '@qwen-code/qwen-code-core/providers/all-providers.js';
 import { resolveMetadataKey } from '@qwen-code/qwen-code-core/providers/provider-config.js';
-import {
-  shortenPath,
-  tildeifyPath,
-} from '@qwen-code/qwen-code-core/utils/paths.js';
+import { tildeifyPath } from '@qwen-code/qwen-code-core/utils/paths.js';
 import type { LoadedSettings } from '../../config/settings.js';
 import { formatVersionLabel } from '../../utils/version.js';
 import { C, GRADIENT, THEME_REVISION } from './theme.js';
@@ -178,11 +175,7 @@ function buildBanner(
   const showModelHint =
     infoPanelContentWidth > 0 &&
     getCachedStringWidth(authModelText + hint) <= infoPanelContentWidth;
-  const shortenedPath = shortenPath(
-    tildeifyPath(targetDir),
-    Math.max(3, maxPathLength),
-  );
-  const displayPath = truncateToWidth(shortenedPath, maxPathLength);
+  const displayPath = truncateToWidth(tildeifyPath(targetDir), maxPathLength);
 
   const title = custom.title ?? '> Bald Puppy';
   const versionSuffix = ` (${versionLabel})`;

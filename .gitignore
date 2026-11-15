@@ -155,3 +155,6 @@ brand-builds/
 # Dependencies install with pnpm from pnpm-lock.yaml; keep an npm install
 # from bringing the retired root lockfile back.
 /package-lock.json
+
+# Locally packed installation archives
+/*.tgz

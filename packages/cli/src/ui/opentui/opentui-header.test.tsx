@@ -130,7 +130,7 @@ describe('OpenTuiBanner', () => {
           <OpenTuiBanner
             config={fakeConfig({
               getModelDisplayName: () => 'long-model-'.repeat(30),
-              getTargetDir: () => '/项目/🎵/'.repeat(20),
+              getTargetDir: () => '/' + '🎵'.repeat(60),
             })}
             settings={fakeSettings()}
           />,
@@ -139,10 +139,13 @@ describe('OpenTuiBanner', () => {
         const rows = [
           ...ui.container.querySelector('[data-bordercolor]')!.children,
         ];
-        for (const row of rows)
+        for (const row of rows) {
           expect(
             getCachedStringWidth(row.textContent ?? ''),
           ).toBeLessThanOrEqual(contentWidth);
+          expect(row.textContent).not.toMatch(/[\uD800-\uDFFF]/u);
+          expect(row.textContent).not.toContain('�');
+        }
         ui.unmount();
       } finally {
         mocks.state.dimensions.width = previous;
