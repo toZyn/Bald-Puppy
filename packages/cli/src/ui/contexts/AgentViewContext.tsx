@@ -63,6 +63,8 @@ export interface AgentViewState {
    * agent composer has synced.
    */
   agentComposerLayoutKey: string;
+  /** Main-view group roster footprint, independent of teammate composer state. */
+  groupPanelLayoutKey: string;
   /** Whether the tab bar has keyboard focus (vs the agent input). */
   agentTabBarFocused: boolean;
   /** Per-agent approval modes (keyed by agentId). */
@@ -94,6 +96,7 @@ export interface AgentViewActions {
   setAgentShellFocused(focused: boolean): void;
   setAgentInputBufferText(text: string): void;
   setAgentComposerLayoutKey(key: string): void;
+  setGroupPanelLayoutKey(key: string): void;
   setAgentTabBarFocused(focused: boolean): void;
   setAgentApprovalMode(agentId: string, mode: ApprovalMode): void;
   /** Replace the queued follow-up messages for an agent (see state docs). */
@@ -115,6 +118,7 @@ const DEFAULT_STATE: AgentViewState = {
   agentShellFocused: false,
   agentInputBufferText: '',
   agentComposerLayoutKey: '',
+  groupPanelLayoutKey: '',
   agentTabBarFocused: false,
   agentApprovalModes: new Map(),
   agentMessageQueues: new Map(),
@@ -132,6 +136,7 @@ const DEFAULT_ACTIONS: AgentViewActions = {
   setAgentShellFocused: noop,
   setAgentInputBufferText: noop,
   setAgentComposerLayoutKey: noop,
+  setGroupPanelLayoutKey: noop,
   setAgentTabBarFocused: noop,
   setAgentApprovalMode: noop,
   setAgentMessageQueue: noop,
@@ -252,6 +257,7 @@ export function AgentViewProvider({
   const [agentShellFocused, setAgentShellFocused] = useState(false);
   const [agentInputBufferText, setAgentInputBufferText] = useState('');
   const [agentComposerLayoutKey, setAgentComposerLayoutKey] = useState('');
+  const [groupPanelLayoutKey, setGroupPanelLayoutKey] = useState('');
   const [agentTabBarFocused, setAgentTabBarFocused] = useState(false);
   const [agentApprovalModes, setAgentApprovalModes] = useState<
     Map<string, ApprovalMode>
@@ -431,6 +437,7 @@ export function AgentViewProvider({
       agentShellFocused,
       agentInputBufferText,
       agentComposerLayoutKey,
+      groupPanelLayoutKey,
       agentTabBarFocused,
       agentApprovalModes,
       agentMessageQueues,
@@ -441,6 +448,7 @@ export function AgentViewProvider({
       agentShellFocused,
       agentInputBufferText,
       agentComposerLayoutKey,
+      groupPanelLayoutKey,
       agentTabBarFocused,
       agentApprovalModes,
       agentMessageQueues,
@@ -458,6 +466,7 @@ export function AgentViewProvider({
       setAgentShellFocused,
       setAgentInputBufferText,
       setAgentComposerLayoutKey,
+      setGroupPanelLayoutKey,
       setAgentTabBarFocused,
       setAgentApprovalMode,
       setAgentMessageQueue,
@@ -473,6 +482,7 @@ export function AgentViewProvider({
       setAgentShellFocused,
       setAgentInputBufferText,
       setAgentComposerLayoutKey,
+      setGroupPanelLayoutKey,
       setAgentTabBarFocused,
       setAgentApprovalMode,
       setAgentMessageQueue,

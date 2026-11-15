@@ -169,6 +169,16 @@ describe('BuiltinCommandLoader', () => {
     },
   );
 
+  it('registers /group as interactive-only even before Agent Team is enabled', async () => {
+    const commands = await new BuiltinCommandLoader(mockConfig).loadCommands(
+      new AbortController().signal,
+    );
+    expect(commands.find((command) => command.name === 'group')).toMatchObject({
+      supportedModes: ['interactive'],
+      action: expect.any(Function),
+    });
+  });
+
   it('registers /pr for interactive, headless and ACP sessions', async () => {
     const commands = await new BuiltinCommandLoader(mockConfig).loadCommands(
       new AbortController().signal,

@@ -33,6 +33,19 @@ import {
 } from '../serve/create-sub-session.js';
 
 describe('SettingsSchema', () => {
+  it('exposes a bounded group size and preserves opt-in collaboration', () => {
+    const schema = getSettingsSchema();
+    expect(schema.experimental.properties.agentTeam.default).toBe(false);
+    expect(schema.agents.properties.team.properties.maxTeammates).toMatchObject(
+      {
+        default: 3,
+        requiresRestart: true,
+        showInDialog: true,
+        jsonSchemaOverride: { type: 'integer', minimum: 1, maximum: 10 },
+      },
+    );
+  });
+
   it('defaults regular subagents to background execution and requires a restart', () => {
     expect(
       getSettingsSchema().agents.properties.defaultBackground,

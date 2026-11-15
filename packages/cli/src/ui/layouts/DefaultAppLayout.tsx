@@ -21,6 +21,7 @@ import { BtwMessage } from '../components/messages/BtwMessage.js';
 import { AgentTabBar } from '../components/agent-view/AgentTabBar.js';
 import { AgentChatView } from '../components/agent-view/AgentChatView.js';
 import { AgentComposer } from '../components/agent-view/AgentComposer.js';
+import { GroupSessionPanel } from '../components/agent-view/GroupSessionPanel.js';
 import { LiveAgentPanel } from '../components/background-view/LiveAgentPanel.js';
 import { getLiveAgentPanelVpMaxRows } from '../components/background-view/liveAgentPanelVisibility.js';
 import { ContextMenuOverlay } from '../context-menu/ContextMenuOverlay.js';
@@ -151,6 +152,13 @@ export const DefaultAppLayout: React.FC = () => {
               </>
             )}
             <ExitWarning />
+            {!uiState.dialogsVisible && hasAgents && (
+              <GroupSessionPanel
+                width={uiState.terminalWidth}
+                height={uiState.terminalHeight}
+                alternateScreen={uiState.useTerminalBuffer}
+              />
+            )}
             {/*
               LiveAgentPanel — always-on roster of running subagents,
               anchored beneath the input footer (mirrors Claude Code's

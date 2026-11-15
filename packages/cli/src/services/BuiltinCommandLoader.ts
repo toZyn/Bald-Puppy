@@ -12,6 +12,7 @@ import { advisorCommand } from '../ui/commands/advisor-command.js';
 import { tasksCommand } from '../ui/commands/tasksCommand.js';
 import { workflowsCommand } from '../ui/commands/workflowsCommand.js';
 import { agentsCommand } from '../ui/commands/agentsCommand.js';
+import { groupCommand } from '../ui/commands/group-command.js';
 import { arenaCommand } from '../ui/commands/arenaCommand.js';
 import { approvalModeCommand } from '../ui/commands/approvalModeCommand.js';
 import {
@@ -130,6 +131,7 @@ export class BuiltinCommandLoader implements ICommandLoader {
       aboutCommand,
       advisorCommand,
       agentsCommand,
+      groupCommand,
       tasksCommand,
       this.config?.isWorkflowsEnabled() ||
       this.config?.isWorkflowModeSupported?.()

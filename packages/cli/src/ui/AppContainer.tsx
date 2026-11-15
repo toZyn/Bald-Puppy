@@ -4549,6 +4549,8 @@ export const AppContainer = (props: AppContainerProps) => {
     // re-measured and the transcript viewport does not stay stale-high
     // (#9507). Mirrors the LiveAgentPanel layout key (#5798).
     agentViewState.agentComposerLayoutKey,
+    agentViewState.groupPanelLayoutKey,
+    agentViewState.agents.size,
     embeddedShellFocused,
     messageQueue.length,
     isInputActive,

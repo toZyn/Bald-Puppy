@@ -59,6 +59,10 @@ vi.mock('../components/StickyTodoList.js', () => ({
   StickyTodoList: () => <Text>StickyTodoList</Text>,
 }));
 
+vi.mock('../components/agent-view/GroupSessionPanel.js', () => ({
+  GroupSessionPanel: () => <Text>GroupSessionPanel</Text>,
+}));
+
 vi.mock('../components/agent-view/AgentTabBar.js', () => ({
   AgentTabBar: () => <Text>AgentTabBar</Text>,
 }));

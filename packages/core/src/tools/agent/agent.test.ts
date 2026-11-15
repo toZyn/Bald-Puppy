@@ -128,6 +128,7 @@ type SchemaProps = Partial<
   Record<
     | 'subagent_type'
     | 'model'
+    | 'teammate_model'
     | 'run_in_background'
     | 'todo_id'
     | 'fork_turns'
@@ -388,6 +389,10 @@ describe('AgentTool', () => {
       getSessionApprovalMode: Config.prototype.getSessionApprovalMode,
       getSessionWorkflowPlanRevision: vi.fn().mockReturnValue(undefined),
       getModel: vi.fn().mockReturnValue('parent-model'),
+      getAvailableModels: vi.fn().mockReturnValue([
+        { id: 'provider/Model-A:latest', authType: 'openai' },
+        { id: 'provider/model', authType: 'openai' },
+      ]),
       getContentGeneratorConfig: vi.fn().mockReturnValue({
         model: 'parent-model',
         authType: 'openai',
@@ -1367,6 +1372,7 @@ describe('AgentTool', () => {
 
     it('does not expose teammate name when teams are disabled', () => {
       expect(schemaProps().name).toBeUndefined();
+      expect(schemaProps().teammate_model).toBeUndefined();
     });
 
     it('exposes teammate name when teams are enabled', async () => {
@@ -1381,6 +1387,10 @@ describe('AgentTool', () => {
     it('exposes plan_mode_required only when teams are enabled', async () => {
       vi.mocked(config.isAgentTeamEnabled).mockReturnValue(true);
       const props = schemaProps(await freshTool());
+      expectText(props.teammate_model?.description, [
+        'Literal model ID',
+        'Unlike model',
+      ]);
       expectText(props.plan_mode_required?.description, [
         'named teammate',
         'Cannot be combined with read_only',
@@ -1947,6 +1957,134 @@ describe('AgentTool', () => {
       expect(spawnTeammate).toHaveBeenCalledWith(
         expect.objectContaining(expected),
       );
+    });
+
+    it('forwards an exact teammate model ID without changing model grades', async () => {
+      vi.mocked(config.isAgentTeamEnabled).mockReturnValue(true);
+      const spawnTeammate = activeTeam();
+      await buildAndRun({
+        ...reader,
+        teammate_model: 'provider/Model-A:latest',
+      });
+      expect(spawnTeammate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'reader',
+          model: 'provider/Model-A:latest',
+        }),
+      );
+    });
+
+    it('does not fall back to a one-shot agent if the team disappears after validation', async () => {
+      vi.mocked(config.isAgentTeamEnabled).mockReturnValue(true);
+      const spawnTeammate = activeTeam();
+      const invocation = agentTool.build({
+        ...reader,
+        teammate_model: 'provider/model',
+      });
+      vi.mocked(config.getTeamManager).mockReturnValue(null);
+      const result = await invocation.execute(new AbortController().signal);
+      expect(textOf(result)).toMatch(
+        /requires a named teammate in an active team/i,
+      );
+      expect(spawnTeammate).not.toHaveBeenCalled();
+    });
+
+    it('rejects a registered teammate model on another endpoint', () => {
+      vi.mocked(config.isAgentTeamEnabled).mockReturnValue(true);
+      activeTeam();
+      vi.mocked(config.getAvailableModels).mockReturnValue([
+        {
+          id: 'provider/model',
+          authType: 'openai',
+          baseUrl: 'https://other.example/v1',
+        },
+      ] as never);
+      expect(() =>
+        agentTool.build({ ...reader, teammate_model: 'provider/model' }),
+      ).toThrow(/provider route and endpoint/i);
+    });
+
+    it('allows a matching teammate endpoint with a trailing slash', async () => {
+      vi.mocked(config.isAgentTeamEnabled).mockReturnValue(true);
+      const spawnTeammate = activeTeam();
+      vi.mocked(config.getContentGeneratorConfig).mockReturnValue({
+        model: 'parent-model',
+        authType: 'openai',
+        baseUrl: 'https://provider.example/v1/',
+      } as never);
+      vi.mocked(config.getAvailableModels).mockReturnValue([
+        {
+          id: 'provider/model',
+          authType: 'openai',
+          baseUrl: 'https://provider.example/v1',
+        },
+      ] as never);
+      await buildAndRun({ ...reader, teammate_model: 'provider/model' });
+      expect(spawnTeammate).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'provider/model' }),
+      );
+    });
+
+    it('rechecks the endpoint before execution if the provider configuration changes', async () => {
+      vi.mocked(config.isAgentTeamEnabled).mockReturnValue(true);
+      const spawnTeammate = activeTeam();
+      const invocation = agentTool.build({
+        ...reader,
+        teammate_model: 'provider/model',
+      });
+      vi.mocked(config.getContentGeneratorConfig).mockReturnValue({
+        model: 'parent-model',
+        authType: 'openai',
+        baseUrl: 'https://other.example/v1',
+      } as never);
+      const result = await invocation.execute(new AbortController().signal);
+      expect(result.error).toBeDefined();
+      expect(spawnTeammate).not.toHaveBeenCalled();
+    });
+
+    it('rejects a model ID unavailable on the current provider route', () => {
+      vi.mocked(config.isAgentTeamEnabled).mockReturnValue(true);
+      activeTeam();
+      expect(() =>
+        agentTool.build({
+          ...reader,
+          teammate_model: 'other-provider/missing',
+        }),
+      ).toThrow(/configured for the current provider route/i);
+    });
+
+    it('rejects teammate_model without an active named teammate', () => {
+      vi.mocked(config.isAgentTeamEnabled).mockReturnValue(true);
+      expect(() =>
+        agentTool.build({
+          description: 'Read',
+          prompt: 'Inspect',
+          teammate_model: 'provider/model',
+        }),
+      ).toThrow(/requires a named teammate/i);
+    });
+
+    it.each(['', ' model', 'model with spaces', 'model\n'])(
+      'rejects invalid teammate model ID %j',
+      (teammate_model) => {
+        vi.mocked(config.isAgentTeamEnabled).mockReturnValue(true);
+        activeTeam();
+        expect(() => agentTool.build({ ...reader, teammate_model })).toThrow(
+          /literal model ID/i,
+        );
+      },
+    );
+
+    it('rejects simultaneous model grade and teammate model ID', () => {
+      vi.mocked(config.isAgentTeamEnabled).mockReturnValue(true);
+      activeTeam();
+      expect(() =>
+        agentTool.build({
+          ...reader,
+          model: 'high',
+          teammate_model: 'provider/model',
+        }),
+      ).toThrow(/cannot be used together/i);
     });
 
     const searcher = {

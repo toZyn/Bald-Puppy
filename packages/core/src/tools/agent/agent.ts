@@ -279,6 +279,8 @@ export interface AgentParams {
   subagent_type?: string;
   /** User-defined model grade for this subagent invocation. */
   model?: string;
+  /** Literal model ID override, only for a named teammate in an active team. */
+  teammate_model?: string;
   /**
    * Parent conversation turns inherited by a fork. Omitted or `all` inherits
    * everything; a positive integer string inherits that many recent user turns.
@@ -387,6 +389,33 @@ const TEAM_AGENT_NAME_PROPERTY = {
     'omit run_in_background for them — an explicit false is rejected. For ' +
     'an inline blocking result, omit name and use a regular agent with ' +
     'run_in_background: false instead.',
+};
+
+/** Explicit teammate overrides reuse the leader generator, including its endpoint. */
+function isTeammateModelOnCurrentRoute(
+  config: Config,
+  modelId: string,
+): boolean {
+  if (modelId === config.getModel()) return true;
+  const current = config.getContentGeneratorConfig();
+  const endpoint = (value: string | undefined) =>
+    value?.replace(/\/+$/, '') ?? '';
+  return config
+    .getAvailableModels()
+    .some(
+      (model) =>
+        model.id === modelId &&
+        model.authType === current.authType &&
+        endpoint(model.baseUrl) === endpoint(current.baseUrl),
+    );
+}
+
+const TEAM_AGENT_MODEL_PROPERTY = {
+  type: 'string',
+  description:
+    'Literal model ID for a named teammate in an active team. Unlike model ' +
+    '(a user-defined grade for one-shot agents), preserve this ID exactly. ' +
+    'Must be configured for the same provider and endpoint as the main agent; cannot be combined with model.',
 };
 
 const TEAM_AGENT_PLAN_REQUIRED_PROPERTY = {
@@ -950,6 +979,7 @@ export class AgentTool extends BaseDeclarativeTool<AgentParams, ToolResult> {
         ...(config.isAgentTeamEnabled()
           ? {
               name: TEAM_AGENT_NAME_PROPERTY,
+              teammate_model: TEAM_AGENT_MODEL_PROPERTY,
               plan_mode_required: TEAM_AGENT_PLAN_REQUIRED_PROPERTY,
               read_only: TEAM_AGENT_READ_ONLY_PROPERTY,
             }
@@ -1131,6 +1161,7 @@ The background-agent rules above apply to background forks unchanged.${delegatio
           description: string;
         };
         name?: typeof TEAM_AGENT_NAME_PROPERTY;
+        teammate_model?: typeof TEAM_AGENT_MODEL_PROPERTY;
         plan_mode_required?: typeof TEAM_AGENT_PLAN_REQUIRED_PROPERTY;
         read_only?: typeof TEAM_AGENT_READ_ONLY_PROPERTY;
         run_in_background?: { description: string };
@@ -1146,11 +1177,13 @@ The background-agent rules above apply to background forks unchanged.${delegatio
       }
       if (teamEnabled) {
         schema.properties.name = TEAM_AGENT_NAME_PROPERTY;
+        schema.properties.teammate_model = TEAM_AGENT_MODEL_PROPERTY;
         schema.properties.plan_mode_required =
           TEAM_AGENT_PLAN_REQUIRED_PROPERTY;
         schema.properties.read_only = TEAM_AGENT_READ_ONLY_PROPERTY;
       } else {
         delete schema.properties.name;
+        delete schema.properties.teammate_model;
         delete schema.properties.plan_mode_required;
         delete schema.properties.read_only;
       }
@@ -1241,6 +1274,30 @@ The background-agent rules above apply to background forks unchanged.${delegatio
           // cache and schema catch up for subsequent calls.
           void this.refreshSubagents();
         }
+      }
+    }
+
+    if (params.teammate_model !== undefined) {
+      if (
+        typeof params.teammate_model !== 'string' ||
+        !params.teammate_model ||
+        /[\s\p{Cc}]/u.test(params.teammate_model)
+      ) {
+        return 'Parameter "teammate_model" must be a non-empty literal model ID without whitespace or control characters.';
+      }
+      if (
+        !this.config.isAgentTeamEnabled() ||
+        !params.name?.trim() ||
+        isSubagentLikeExecutionContext() ||
+        !this.config.getTeamManager()
+      ) {
+        return 'Parameter "teammate_model" requires a named teammate in an active team, spawned by the main agent.';
+      }
+      if (params.model !== undefined) {
+        return 'Parameters "model" and "teammate_model" cannot be used together.';
+      }
+      if (!isTeammateModelOnCurrentRoute(this.config, params.teammate_model)) {
+        return 'Parameter "teammate_model" must identify a model configured for the current provider route and endpoint.';
       }
     }
 
@@ -2693,6 +2750,23 @@ class AgentToolInvocation extends BaseToolInvocation<AgentParams, ToolResult> {
         returnDisplay: message,
         error: { message },
       };
+    }
+    if (
+      this.params.teammate_model !== undefined &&
+      (!this.config.isAgentTeamEnabled() ||
+        typeof this.params.teammate_model !== 'string' ||
+        !this.params.teammate_model ||
+        /[\s\p{Cc}]/u.test(this.params.teammate_model) ||
+        !this.params.name?.trim() ||
+        isSubagentLikeExecutionContext() ||
+        !this.config.getTeamManager() ||
+        this.params.model !== undefined ||
+        !isTeammateModelOnCurrentRoute(this.config, this.params.teammate_model))
+    ) {
+      return this.buildSpawnBlockedResult(
+        'Error: teammate_model requires a named teammate in an active team, spawned by the main agent, and cannot be combined with model.',
+        'Invalid teammate model override',
+      );
     }
     const sessionWorkflowAgent =
       this.config.getSessionWorkflowPlanRevision?.() !== undefined;
@@ -5438,6 +5512,7 @@ class AgentToolInvocation extends BaseToolInvocation<AgentParams, ToolResult> {
 
       await teamManager.spawnTeammate({
         name,
+        model: this.params.teammate_model,
         prompt: this.params.prompt,
         agentType: this.params.subagent_type,
         cwd,

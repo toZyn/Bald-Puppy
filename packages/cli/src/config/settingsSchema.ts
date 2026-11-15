@@ -4132,9 +4132,26 @@ const SETTINGS_SCHEMA = {
         category: 'Advanced',
         requiresRestart: false,
         default: {},
-        description:
-          'Settings for Agent Team (role-based collaborative execution). Reserved for future use.',
+        description: 'Settings for collaborative group sessions.',
         showInDialog: false,
+        properties: {
+          maxTeammates: {
+            type: 'number',
+            label: 'Maximum Group Teammates',
+            category: 'Advanced',
+            requiresRestart: true,
+            default: 3,
+            description:
+              'Maximum teammates in a group. More agents can increase latency and model usage. The main agent coordinates the group.',
+            showInDialog: true,
+            jsonSchemaOverride: {
+              type: 'integer',
+              minimum: 1,
+              maximum: 10,
+              default: 3,
+            },
+          },
+        },
       },
       swarm: {
         type: 'object',

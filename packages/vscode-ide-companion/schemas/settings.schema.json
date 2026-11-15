@@ -2064,9 +2064,17 @@
           }
         },
         "team": {
-          "description": "Settings for Agent Team (role-based collaborative execution). Reserved for future use.",
+          "description": "Settings for collaborative group sessions.",
           "type": "object",
-          "additionalProperties": true
+          "properties": {
+            "maxTeammates": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 3,
+              "description": "Maximum teammates in a group. More agents can increase latency and model usage. The main agent coordinates the group."
+            }
+          }
         },
         "swarm": {
           "description": "Settings for Agent Swarm (parallel sub-agent execution). Reserved for future use.",
