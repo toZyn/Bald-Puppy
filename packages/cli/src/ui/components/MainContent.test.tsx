@@ -706,6 +706,31 @@ describe('<MainContent />', () => {
     expect(staticItemsSpy.mock.calls.at(-1)?.[0]).toHaveLength(TOTAL);
   });
 
+  it.each([true, false])(
+    'budgets the real transcript width with scrollbar=%s',
+    (showScrollbar) => {
+      historyItemDisplayPropsSpy.mockClear();
+      renderMainContent(
+        createUIState({
+          useTerminalBuffer: true,
+          terminalWidth: 40,
+          mainAreaWidth: 36,
+          showScrollbar,
+          history: [{ id: 1, type: 'gemini', text: 'completed' }],
+          pendingHistoryItems: [{ type: 'gemini_content', text: 'live' }],
+        }),
+      );
+      const rows = historyItemDisplayPropsSpy.mock.calls.map(
+        ([props]) => props,
+      );
+      expect(rows.length).toBeGreaterThanOrEqual(2);
+      for (const row of rows) {
+        expect(row.terminalWidth).toBe(showScrollbar ? 39 : 40);
+        expect(row.mainAreaWidth).toBe(showScrollbar ? 35 : 36);
+      }
+    },
+  );
+
   describe('fullDetail wiring (Ctrl+O / Alt+T full-detail toggle)', () => {
     const toolGroupHistory = [
       {

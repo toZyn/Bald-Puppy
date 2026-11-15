@@ -6,6 +6,8 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import stripAnsi from 'strip-ansi';
+import stringWidth from 'string-width';
+import { Box } from 'ink';
 import { MarkdownDisplay } from './MarkdownDisplay.js';
 import { LoadedSettings } from '../../config/settings.js';
 import { renderWithProviders } from '../../test-utils/render.js';
@@ -49,6 +51,72 @@ describe('<MarkdownDisplay />', () => {
       <MarkdownDisplay {...baseProps} text={text} />,
     );
     expect(lastFrame()).toMatchSnapshot();
+  });
+
+  it('renders a bounded visual separator while streaming and after completion', () => {
+    for (const isPending of [true, false]) {
+      const { lastFrame, unmount } = renderWithProviders(
+        <Box width={32} flexDirection="column">
+          <MarkdownDisplay
+            {...baseProps}
+            isPending={isPending}
+            contentWidth={32}
+            text={'Before\n\n---\n\nAfter'}
+          />
+        </Box>,
+      );
+      const frame = stripAnsi(lastFrame()!);
+      expect(frame).toContain('─'.repeat(32));
+      expect(frame).not.toContain('---');
+      unmount();
+    }
+  });
+
+  it('keeps wrapped list markers and Unicode inside the actual content width', () => {
+    const { lastFrame } = renderWithProviders(
+      <Box width={24} flexDirection="column">
+        <MarkdownDisplay
+          {...baseProps}
+          contentWidth={24}
+          isPending
+          text={'1. ' + '漢字🙂'.repeat(20) + '\n   - nested item'}
+        />
+      </Box>,
+    );
+    const lines = stripAnsi(lastFrame()!).split('\n');
+    expect(lines[0]).toMatch(/^ 1\. /);
+    expect(lines.every((line) => stringWidth(line) <= 24)).toBe(true);
+    expect(lines.filter((line) => line.includes('1.'))).toHaveLength(1);
+  });
+
+  it('renders nested inline formatting before a streamed reply is complete', () => {
+    const { lastFrame } = renderWithProviders(
+      <MarkdownDisplay
+        {...baseProps}
+        isPending
+        text={
+          '## Archivos\n\n**`hora.js`** creado; **resultado en *directo***.'
+        }
+      />,
+    );
+    const frame = stripAnsi(lastFrame()!);
+    expect(frame).toContain('hora.js');
+    expect(frame).not.toContain('`hora.js`');
+    expect(frame).toContain('resultado en directo');
+    expect(frame).not.toContain('*directo');
+  });
+
+  it('renders terminal output without a source-code gutter by default', () => {
+    const { lastFrame } = renderWithProviders(
+      <MarkdownDisplay
+        {...baseProps}
+        text={
+          '```\nHora actual: 08:23:08\nFecha y hora actual: 2026-11-15\n```'
+        }
+      />,
+    );
+    expect(stripAnsi(lastFrame()!)).toContain('Hora actual: 08:23:08');
+    expect(stripAnsi(lastFrame()!)).not.toMatch(/1 Hora actual/);
   });
 
   const lineEndings = [
@@ -424,7 +492,7 @@ describe('<MarkdownDisplay />', () => {
       );
       expect(lastFrame()).toMatchSnapshot();
       expect(copiedFrame(stdout as unknown as NodeJS.WriteStream)).toContain(
-        '- item A\n* item B\n+ item C',
+        '• item A\n• item B\n• item C',
       );
     });
 

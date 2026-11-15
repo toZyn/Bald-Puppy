@@ -6,6 +6,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import stripAnsi from 'strip-ansi';
+import { Text } from 'ink';
 import { renderWithProviders } from '../../test-utils/render.js';
 import { getPlainTextLength, RenderInline } from './InlineMarkdownRenderer.js';
 import { HYPERLINK_ENV_KEYS } from './osc8.js';
@@ -39,6 +40,22 @@ describe('<RenderInline />', () => {
       configurable: true,
       value: savedPlatform,
     });
+  });
+
+  it('renders nested strong, italic and inline code without literal delimiters', () => {
+    const { lastFrame } = renderWithProviders(
+      <Text>
+        <RenderInline text={'**`hora.js`** y **resultado en *directo***'} />
+      </Text>,
+    );
+    expect(stripAnsi(lastFrame()!)).toBe('hora.js y resultado en directo');
+  });
+
+  it('preserves escaped dollar signs inside strong text', () => {
+    const { lastFrame } = renderWithProviders(
+      <RenderInline text={'**Literal \\$xy$**'} enableInlineMath />,
+    );
+    expect(stripAnsi(lastFrame()!)).toBe('Literal $xy$');
   });
 
   it('leaves shell-style dollar variables untouched by default', () => {

@@ -58,7 +58,7 @@ function lastUser(server: FakeOpenAIServer): string {
     .join('');
 }
 
-async function scenario(name: 'minimal' | 'extended') {
+async function scenario(name: 'minimal' | 'extended' | 'markdown') {
   const evidenceRoot =
     process.env['TUI_FIDELITY_OUT'] ??
     join(tmpdir(), 'bald-puppy-tui-fidelity');
@@ -102,12 +102,19 @@ async function scenario(name: 'minimal' | 'extended') {
     ({ requestIndex }) =>
       requestIndex === 0
         ? {
-            contentChunks: [
-              'MOCK_TURN_1_HEAD\n',
-              'Local streaming line\n',
-              'MOCK_TURN_1_DONE',
-            ],
-            holdAfterChunks: 1,
+            contentChunks:
+              name === 'markdown'
+                ? [
+                    '## Informe\n\n**`hora.js`** listo.\n\n',
+                    '- Hora: **08:23:08**\n- Fecha: *2026-11-15*\n\n---\n\n```\nHora actual: 08:23:08\n',
+                    'Fecha actual: 2026-11-15\n```\n\nMOCK_MARKDOWN_DONE',
+                  ]
+                : [
+                    'MOCK_TURN_1_HEAD\n',
+                    'Local streaming line\n',
+                    'MOCK_TURN_1_DONE',
+                  ],
+            holdAfterChunks: name === 'markdown' ? 2 : 1,
             holdUntil: held,
           }
         : {
@@ -221,6 +228,34 @@ async function scenario(name: 'minimal' | 'extended') {
     await session.send('First local fixture turn.');
     await until(() => server.requests.length === 1, 'first loopback request');
     await frame('stream-held');
+    if (name === 'markdown') {
+      for (const width of [80, 40]) {
+        const live = await resize(width, 30, `markdown-live-${width}`);
+        expect(live).toContain('hora.js listo.');
+        expect(live).toContain('• Hora: 08:23:08');
+        expect(live).toContain('Hora actual: 08:23:08');
+        expect(live).toContain('────────');
+        expect(live).not.toMatch(/^\s+─{1,2}\s*(?:[█│])?$/m);
+        expect(live).not.toContain('**');
+        expect(live).not.toContain('```');
+        expect(live).not.toContain('`hora.js`');
+        expect(live).not.toContain('MOCK_MARKDOWN_DONE');
+        json(
+          join(evidence, `markdown-live-${width}-cells.json`),
+          await session.viewportCells({ includeBackground: true }),
+        );
+      }
+      release();
+      await until(
+        async () => (await session!.viewport()).includes('MOCK_MARKDOWN_DONE'),
+        'formatted final Markdown',
+      );
+      const done = await frame('markdown-done');
+      expect(done).toContain('Fecha actual: 2026-11-15');
+      expect(done).not.toContain('```');
+      expect(server.requests).toHaveLength(1);
+      return;
+    }
     const sequence =
       name === 'minimal'
         ? [
@@ -444,6 +479,11 @@ describe.skipIf(process.platform === 'win32')(
       're-emits one-shot Static agent history after VP geometry clears',
       staticGeometryScenario,
       30_000,
+    );
+    it(
+      'renders Markdown while the response and its code fence are still open',
+      () => scenario('markdown'),
+      90_000,
     );
     it(
       'keeps one header after the minimal keyboard-height resize regression',

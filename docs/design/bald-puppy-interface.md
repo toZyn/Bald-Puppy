@@ -22,6 +22,14 @@ The previous last-frame component assertions did not exercise the complete termi
 
 Viewport mode previously treated width shrink as the only erase-coordinate invalidation. The viewport is now cleared while layout settles after either dimension changes. Frame replay also requires matching width and height. One-shot Static content is remounted immediately and once the clear window closes, so agent-tab history survives keyboard height changes without clearing native scrollback in normal mode. The loading row separately constrains its own width so long labels do not create unexpected physical wraps.
 
+## Markdown streaming and tool density
+
+The screenshot-driven reproduction preserves reply order at 40/80 columns, but exposes literal horizontal-rule styling, leaked inline-code markers inside strong emphasis, and noisy completed file diffs. Render rules as bounded lines, unordered lists as consistent bullets, and headings with the accent color. Parse nested strong/italic inline content with a maximum depth of 16, preserving escapes and existing link validation. Unlabelled output blocks omit source-code line numbers by default; explicit user preferences still win.
+
+A completed successful internal write/edit uses an added/removed-line summary with the existing Ctrl+O expansion. Errors, confirmations, explicit full detail, screen readers and saved-session truncation notices retain their full presentation. The stored diff and executed operation are unchanged.
+
+The virtual transcript budgets one less column when its scrollbar is present. Both completed and pending rows use that physical width; otherwise a nominally fitting rule/code block can wrap onto an extra line. A maintained full-CLI loopback test pauses a response with an open code fence and requires formatted headings, nested inline code, bullets and a rule before completion, at 40/80 columns. It rejects stray one-character rule fragments, then verifies the final tail after release.
+
 ## Validation
 
 Run focused tests for all changed components and downstream transcript/menu consumers, plus the maintained `integration-tests/interactive/tui-header-repaint.test.ts`. This full-CLI acceptance test uses a deterministic loopback model and verifies the actual submitted Unicode text after paste and editing, two responses, slash completion, the model dialog, streaming, repeated width/height changes and a one-shot Static fixture.

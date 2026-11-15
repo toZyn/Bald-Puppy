@@ -30,7 +30,9 @@ npx vitest run --root integration-tests interactive/tui-header-repaint.test.ts -
 
 Capturas del ejecutable real, reconstruidas desde las celdas de la terminal:
 
-![Terminal de 80 columnas](docs/images/bald-puppy-terminal-80.png)
+![Markdown mientras la respuesta sigue generándose](docs/images/bald-puppy-markdown-live-80.png)
+
+La respuesta de esta captura está retenida a mitad de generación y mantiene un bloque de código abierto. El contenido procede de un modelo local simulado; las escrituras de archivos completadas se resumen y se pueden expandir con Ctrl+O.
 
 [Captura de 40 columnas y método](docs/images/bald-puppy-terminal-capture.md). El selector de modelos adapta sus filas al abrir el teclado y mantiene visibles selección y navegación en 40×10. Consulta [la investigación de Zyn Agent](docs/design/zyn-tui-reference-audit.md). La prueba automatizada se ejecuta en Linux; queda pendiente la comprobación nativa en Termux.
 

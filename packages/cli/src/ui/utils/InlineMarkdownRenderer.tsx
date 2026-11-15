@@ -38,7 +38,7 @@ const INLINE_CODE_MARKER_LENGTH = 1; // For "`"
 const UNDERLINE_TAG_START_LENGTH = 3; // For "<u>"
 const UNDERLINE_TAG_END_LENGTH = 4; // For "</u>"
 const INLINE_MARKDOWN_REGEX = new RegExp(
-  String.raw`(\*\*.*?\*\*|\*.*?\*|(?<![\w\u3400-\u9fff])_(?!_)[^_]*_(?![\w\u3400-\u9fff])|~~.*?~~|${MD_LINK_PATTERN}|` +
+  String.raw`(\*\*.*?\*\*(?!\*)|\*.*?\*|(?<![\w\u3400-\u9fff])_(?!_)[^_]*_(?![\w\u3400-\u9fff])|~~.*?~~|${MD_LINK_PATTERN}|` +
     String.raw`${INLINE_CODE_SPAN_PATTERN_SOURCE}|<u>.*?<\/u>|${BARE_URL_PATTERN})`,
   'g',
 );
@@ -49,18 +49,21 @@ interface RenderInlineProps {
   text: string;
   textColor?: string;
   enableInlineMath?: boolean;
+  depth?: number;
 }
 
 const RenderInlineInternal: React.FC<RenderInlineProps> = ({
   text,
   textColor = theme.text.primary,
   enableInlineMath = false,
+  depth = 0,
 }) => {
   // Early return for plain text without markdown or URLs
   if (
-    !/[*_~`<[]|https?:/.test(text) &&
-    !(enableInlineMath && text.includes('$')) &&
-    !text.includes('\\$')
+    depth >= 16 ||
+    (!/[*_~`<[]|https?:/.test(text) &&
+      !(enableInlineMath && text.includes('$')) &&
+      !text.includes('\\$'))
   ) {
     return <Text color={textColor}>{text}</Text>;
   }
@@ -112,9 +115,12 @@ const RenderInlineInternal: React.FC<RenderInlineProps> = ({
       ) {
         renderedNode = (
           <Text key={key} bold>
-            {unescapeMarkdownDollars(
-              fullMatch.slice(BOLD_MARKER_LENGTH, -BOLD_MARKER_LENGTH),
-            )}
+            <RenderInline
+              text={fullMatch.slice(BOLD_MARKER_LENGTH, -BOLD_MARKER_LENGTH)}
+              textColor={textColor}
+              enableInlineMath={enableInlineMath}
+              depth={depth + 1}
+            />
           </Text>
         );
       } else if (
@@ -138,9 +144,15 @@ const RenderInlineInternal: React.FC<RenderInlineProps> = ({
       ) {
         renderedNode = (
           <Text key={key} italic>
-            {unescapeMarkdownDollars(
-              fullMatch.slice(ITALIC_MARKER_LENGTH, -ITALIC_MARKER_LENGTH),
-            )}
+            <RenderInline
+              text={fullMatch.slice(
+                ITALIC_MARKER_LENGTH,
+                -ITALIC_MARKER_LENGTH,
+              )}
+              textColor={textColor}
+              enableInlineMath={enableInlineMath}
+              depth={depth + 1}
+            />
           </Text>
         );
       } else if (

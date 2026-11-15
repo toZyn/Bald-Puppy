@@ -59,7 +59,7 @@ def render(source, destination):
             if cell['dim']:
                 foreground = tuple(int(channel * 0.65) for channel in foreground)
             font = CJK if any(0x2e80 <= ord(character) < 0xffff for character in text) else MONO
-            if text in ['⏸', '⏵', '⏹']:
+            if text in ['⏸', '⏵', '⏹'] or any(0x2800 <= ord(char) <= 0x28ff for char in text):
                 font = SYMBOLS
             draw.text((PADDING + column * CELL_WIDTH, PADDING + row_index * CELL_HEIGHT + 20),
                       text, font=font, fill=foreground, anchor='ls')

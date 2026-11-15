@@ -460,6 +460,14 @@ export const MainContent = ({
   // static-history source-copy offsets).
   // Streaming-only state — including pending source-copy offsets — is read
   // from refs so callback identity is stable.
+  const virtualTerminalWidth = Math.max(
+    1,
+    terminalWidth - Number(showScrollbar),
+  );
+  const virtualMainAreaWidth = Math.max(
+    1,
+    Math.min(mainAreaWidth, virtualTerminalWidth - 4),
+  );
   const renderVirtualItem = useCallback(
     ({ item }: { item: VpItem }) => {
       if (item.type === 'vp-banner') {
@@ -479,8 +487,8 @@ export const MainContent = ({
         const ps = pendingStateRef.current;
         return (
           <VirtualHistoryItem
-            terminalWidth={terminalWidth}
-            mainAreaWidth={mainAreaWidth}
+            terminalWidth={virtualTerminalWidth}
+            mainAreaWidth={virtualMainAreaWidth}
             availableTerminalHeight={pendingAvailableTerminalHeight}
             item={{ ...item, id: 0 }}
             isPending={true}
@@ -495,8 +503,8 @@ export const MainContent = ({
       }
       return (
         <VirtualHistoryItem
-          terminalWidth={terminalWidth}
-          mainAreaWidth={mainAreaWidth}
+          terminalWidth={virtualTerminalWidth}
+          mainAreaWidth={virtualMainAreaWidth}
           availableTerminalHeight={
             uiState.constrainHeight ? staticAreaMaxItemHeight : undefined
           }
@@ -515,8 +523,8 @@ export const MainContent = ({
     },
     [
       version,
-      terminalWidth,
-      mainAreaWidth,
+      virtualTerminalWidth,
+      virtualMainAreaWidth,
       staticAreaMaxItemHeight,
       uiState.slashCommands,
       sourceCopyOffsetsByHistoryItem,

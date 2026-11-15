@@ -846,6 +846,77 @@ describe('<ToolMessage />', () => {
     });
   });
 
+  it('summarizes a completed file write while keeping its full diff expandable', () => {
+    const fileDiff =
+      '--- a/hora.js\n+++ b/hora.js\n@@ -0,0 +1,36 @@\n' +
+      Array.from({ length: 36 }, (_, i) => `+const line${i} = ${i};`).join(
+        '\n',
+      );
+    const props = {
+      ...baseProps,
+      name: 'write_file',
+      resultDisplay: {
+        fileDiff,
+        fileName: 'hora.js',
+        originalContent: '',
+        newContent: 'fixture',
+      },
+    };
+    const ui = renderWithContext(
+      <ToolMessage {...props} />,
+      StreamingState.Idle,
+    );
+    expect(ui.lastFrame()).toContain('+36');
+    expect(ui.lastFrame()).toContain(toggleKeyHint);
+    expect(ui.lastFrame()).not.toContain('MockDiff:');
+    ui.unmount();
+    const expanded = renderWithContext(
+      <ToolMessage {...props} fullDetail forceShowResult />,
+      StreamingState.Idle,
+    );
+    expect(expanded.lastFrame()).toContain('MockDiff:');
+    expect(expanded.lastFrame()).toContain('const line35');
+  });
+
+  it.each([
+    ToolCallStatus.Error,
+    ToolCallStatus.Confirming,
+    ToolCallStatus.Executing,
+  ])('keeps the file content visible for %s', (status) => {
+    const ui = renderWithContext(
+      <ToolMessage
+        {...baseProps}
+        name="write_file"
+        status={status}
+        resultDisplay={{
+          fileDiff: '--- a/f\n+++ b/f\n@@ -0,0 +1 @@\n+important',
+          fileName: 'f',
+          originalContent: '',
+          newContent: 'important',
+        }}
+      />,
+      StreamingState.Idle,
+    );
+    expect(ui.lastFrame()).toContain('MockDiff:');
+  });
+
+  it('counts added source lines beginning with plus signs', () => {
+    const ui = renderWithContext(
+      <ToolMessage
+        {...baseProps}
+        name="write_file"
+        resultDisplay={{
+          fileDiff: '--- a/f\n+++ b/f\n@@ -0,0 +1 @@\n+++counter;',
+          fileName: 'f',
+          originalContent: '',
+          newContent: '++counter;',
+        }}
+      />,
+      StreamingState.Idle,
+    );
+    expect(ui.lastFrame()).toContain('+1 −0');
+  });
+
   it('renders DiffRenderer for diff results', () => {
     const diffResult = {
       fileDiff: '--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-old\n+new',

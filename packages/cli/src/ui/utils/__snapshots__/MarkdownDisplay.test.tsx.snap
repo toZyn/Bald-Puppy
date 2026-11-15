@@ -15,10 +15,10 @@ exports[`<MarkdownDisplay /> > with 'Unix' line endings > correctly parses a mix
 
 Here is a paragraph.
 
- - List item 1
- - List item 2
+ • List item 1
+ • List item 2
 
- 1 some code
+ some code
 
 Another paragraph.
 "
@@ -46,27 +46,27 @@ exports[`<MarkdownDisplay /> > with 'Unix' line endings > renders a fenced code 
  2 console.log(x);"
 `;
 
-exports[`<MarkdownDisplay /> > with 'Unix' line endings > renders a fenced code block without a language 1`] = `" 1 plain text"`;
+exports[`<MarkdownDisplay /> > with 'Unix' line endings > renders a fenced code block without a language 1`] = `" plain text"`;
 
 exports[`<MarkdownDisplay /> > with 'Unix' line endings > renders a single-column table 1`] = `
 "
-[38;2;108;112;134m┌───────┐[39m
-[38;2;108;112;134m│[39m [38;2;137;180;250m[1mName [22m[39m [38;2;108;112;134m│[39m
-[38;2;108;112;134m├───────┤[39m
-[38;2;108;112;134m│[39m Alice [38;2;108;112;134m│[39m
-[38;2;108;112;134m├───────┤[39m
-[38;2;108;112;134m│[39m Bob   [38;2;108;112;134m│[39m
-[38;2;108;112;134m└───────┘[39m
+[38;2;56;56;56m┌───────┐[39m
+[38;2;56;56;56m│[39m [38;2;102;153;204m[1mName [22m[39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m├───────┤[39m
+[38;2;56;56;56m│[39m [38;2;255;255;255mAlice[39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m├───────┤[39m
+[38;2;56;56;56m│[39m [38;2;255;255;255mBob  [39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m└───────┘[39m
 "
 `;
 
 exports[`<MarkdownDisplay /> > with 'Unix' line endings > renders a single-column table with center alignment 1`] = `
 "
-[38;2;108;112;134m┌───────┐[39m
-[38;2;108;112;134m│[39m [38;2;137;180;250m[1mName [22m[39m [38;2;108;112;134m│[39m
-[38;2;108;112;134m├───────┤[39m
-[38;2;108;112;134m│[39m Alice [38;2;108;112;134m│[39m
-[38;2;108;112;134m└───────┘[39m
+[38;2;56;56;56m┌───────┐[39m
+[38;2;56;56;56m│[39m [38;2;102;153;204m[1mName [22m[39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m├───────┤[39m
+[38;2;56;56;56m│[39m [38;2;255;255;255mAlice[39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m└───────┘[39m
 "
 `;
 
@@ -80,17 +80,17 @@ Header 4
 
 exports[`<MarkdownDisplay /> > with 'Unix' line endings > renders horizontal rules 1`] = `
 "Hello
----
+────────────────────────────────────────────────────────────────────────
 World
----
+────────────────────────────────────────────────────────────────────────
 Test
 "
 `;
 
 exports[`<MarkdownDisplay /> > with 'Unix' line endings > renders nested unordered lists 1`] = `
-" * Level 1
-   * Level 2
-     * Level 3
+" • Level 1
+   • Level 2
+     • Level 3
 "
 `;
 
@@ -102,20 +102,20 @@ exports[`<MarkdownDisplay /> > with 'Unix' line endings > renders ordered lists 
 
 exports[`<MarkdownDisplay /> > with 'Unix' line endings > renders tables correctly 1`] = `
 "
-[38;2;108;112;134m┌──────────┬──────────┐[39m
-[38;2;108;112;134m│[39m [38;2;137;180;250m[1mHeader 1[22m[39m [38;2;108;112;134m│[39m [38;2;137;180;250m[1mHeader 2[22m[39m [38;2;108;112;134m│[39m
-[38;2;108;112;134m├──────────┼──────────┤[39m
-[38;2;108;112;134m│[39m Cell 1   [38;2;108;112;134m│[39m  Cell 2  [38;2;108;112;134m│[39m
-[38;2;108;112;134m├──────────┼──────────┤[39m
-[38;2;108;112;134m│[39m Cell 3   [38;2;108;112;134m│[39m  Cell 4  [38;2;108;112;134m│[39m
-[38;2;108;112;134m└──────────┴──────────┘[39m
+[38;2;56;56;56m┌──────────┬──────────┐[39m
+[38;2;56;56;56m│[39m [38;2;102;153;204m[1mHeader 1[22m[39m [38;2;56;56;56m│[39m [38;2;102;153;204m[1mHeader 2[22m[39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m├──────────┼──────────┤[39m
+[38;2;56;56;56m│[39m [38;2;255;255;255mCell 1  [39m [38;2;56;56;56m│[39m [38;2;255;255;255m Cell 2 [39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m├──────────┼──────────┤[39m
+[38;2;56;56;56m│[39m [38;2;255;255;255mCell 3  [39m [38;2;56;56;56m│[39m [38;2;255;255;255m Cell 4 [39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m└──────────┴──────────┘[39m
 "
 `;
 
 exports[`<MarkdownDisplay /> > with 'Unix' line endings > renders unordered lists with different markers 1`] = `
-" - item A
- * item B
- + item C
+" • item A
+ • item B
+ • item C
 "
 `;
 
@@ -126,10 +126,10 @@ exports[`<MarkdownDisplay /> > with 'Windows' line endings > correctly parses a 
 
 Here is a paragraph.
 
- - List item 1
- - List item 2
+ • List item 1
+ • List item 2
 
- 1 some code
+ some code
 
 Another paragraph.
 "
@@ -157,27 +157,27 @@ exports[`<MarkdownDisplay /> > with 'Windows' line endings > renders a fenced co
  2 console.log(x);"
 `;
 
-exports[`<MarkdownDisplay /> > with 'Windows' line endings > renders a fenced code block without a language 1`] = `" 1 plain text"`;
+exports[`<MarkdownDisplay /> > with 'Windows' line endings > renders a fenced code block without a language 1`] = `" plain text"`;
 
 exports[`<MarkdownDisplay /> > with 'Windows' line endings > renders a single-column table 1`] = `
 "
-[38;2;108;112;134m┌───────┐[39m
-[38;2;108;112;134m│[39m [38;2;137;180;250m[1mName [22m[39m [38;2;108;112;134m│[39m
-[38;2;108;112;134m├───────┤[39m
-[38;2;108;112;134m│[39m Alice [38;2;108;112;134m│[39m
-[38;2;108;112;134m├───────┤[39m
-[38;2;108;112;134m│[39m Bob   [38;2;108;112;134m│[39m
-[38;2;108;112;134m└───────┘[39m
+[38;2;56;56;56m┌───────┐[39m
+[38;2;56;56;56m│[39m [38;2;102;153;204m[1mName [22m[39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m├───────┤[39m
+[38;2;56;56;56m│[39m [38;2;255;255;255mAlice[39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m├───────┤[39m
+[38;2;56;56;56m│[39m [38;2;255;255;255mBob  [39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m└───────┘[39m
 "
 `;
 
 exports[`<MarkdownDisplay /> > with 'Windows' line endings > renders a single-column table with center alignment 1`] = `
 "
-[38;2;108;112;134m┌───────┐[39m
-[38;2;108;112;134m│[39m [38;2;137;180;250m[1mName [22m[39m [38;2;108;112;134m│[39m
-[38;2;108;112;134m├───────┤[39m
-[38;2;108;112;134m│[39m Alice [38;2;108;112;134m│[39m
-[38;2;108;112;134m└───────┘[39m
+[38;2;56;56;56m┌───────┐[39m
+[38;2;56;56;56m│[39m [38;2;102;153;204m[1mName [22m[39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m├───────┤[39m
+[38;2;56;56;56m│[39m [38;2;255;255;255mAlice[39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m└───────┘[39m
 "
 `;
 
@@ -191,17 +191,17 @@ Header 4
 
 exports[`<MarkdownDisplay /> > with 'Windows' line endings > renders horizontal rules 1`] = `
 "Hello
----
+────────────────────────────────────────────────────────────────────────
 World
----
+────────────────────────────────────────────────────────────────────────
 Test
 "
 `;
 
 exports[`<MarkdownDisplay /> > with 'Windows' line endings > renders nested unordered lists 1`] = `
-" * Level 1
-   * Level 2
-     * Level 3
+" • Level 1
+   • Level 2
+     • Level 3
 "
 `;
 
@@ -213,20 +213,20 @@ exports[`<MarkdownDisplay /> > with 'Windows' line endings > renders ordered lis
 
 exports[`<MarkdownDisplay /> > with 'Windows' line endings > renders tables correctly 1`] = `
 "
-[38;2;108;112;134m┌──────────┬──────────┐[39m
-[38;2;108;112;134m│[39m [38;2;137;180;250m[1mHeader 1[22m[39m [38;2;108;112;134m│[39m [38;2;137;180;250m[1mHeader 2[22m[39m [38;2;108;112;134m│[39m
-[38;2;108;112;134m├──────────┼──────────┤[39m
-[38;2;108;112;134m│[39m Cell 1   [38;2;108;112;134m│[39m  Cell 2  [38;2;108;112;134m│[39m
-[38;2;108;112;134m├──────────┼──────────┤[39m
-[38;2;108;112;134m│[39m Cell 3   [38;2;108;112;134m│[39m  Cell 4  [38;2;108;112;134m│[39m
-[38;2;108;112;134m└──────────┴──────────┘[39m
+[38;2;56;56;56m┌──────────┬──────────┐[39m
+[38;2;56;56;56m│[39m [38;2;102;153;204m[1mHeader 1[22m[39m [38;2;56;56;56m│[39m [38;2;102;153;204m[1mHeader 2[22m[39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m├──────────┼──────────┤[39m
+[38;2;56;56;56m│[39m [38;2;255;255;255mCell 1  [39m [38;2;56;56;56m│[39m [38;2;255;255;255m Cell 2 [39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m├──────────┼──────────┤[39m
+[38;2;56;56;56m│[39m [38;2;255;255;255mCell 3  [39m [38;2;56;56;56m│[39m [38;2;255;255;255m Cell 4 [39m [38;2;56;56;56m│[39m
+[38;2;56;56;56m└──────────┴──────────┘[39m
 "
 `;
 
 exports[`<MarkdownDisplay /> > with 'Windows' line endings > renders unordered lists with different markers 1`] = `
-" - item A
- * item B
- + item C
+" • item A
+ • item B
+ • item C
 "
 `;
 

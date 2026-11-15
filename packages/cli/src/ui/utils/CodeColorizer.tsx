@@ -236,6 +236,7 @@ export interface ColorizeCodeOptions {
   settings?: LoadedSettings;
   tabWidth?: number;
   startLineNumber?: number;
+  showLineNumbers?: boolean;
 }
 
 export function colorizeCode(
@@ -251,7 +252,8 @@ export function colorizeCode(
     .replace(/\n$/, '')
     .replace(/\t/g, ' '.repeat(tabWidth));
   const activeTheme = theme || themeManager.getActiveTheme();
-  const showLineNumbers = settings?.merged.ui?.showLineNumbers ?? true;
+  const showLineNumbers =
+    options.showLineNumbers ?? settings?.merged.ui?.showLineNumbers ?? true;
   // Resolve the loader state once per block, not once per line. Triggers the
   // lazy import on first use; subsequent renders pick up the highlighted
   // output once the chunk lands. Hoisting this out of the per-line render

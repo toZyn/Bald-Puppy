@@ -5,7 +5,8 @@
  */
 
 import React from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useIsScreenReaderEnabled } from 'ink';
+import { ToolNames } from '@qwen-code/qwen-code-core/tools/tool-names.js';
 import type { IndividualToolCallDisplay } from '../../types.js';
 import { ToolCallStatus } from '../../types.js';
 import { DiffRenderer } from './DiffRenderer.js';
@@ -174,7 +175,7 @@ type DisplayRendererResult =
   | { type: 'plan'; data: PlanResultDisplay }
   | { type: 'advisor'; data: AdvisorDisplay }
   | { type: 'string'; data: string }
-  | { type: 'diff'; data: { fileDiff: string; fileName: string } }
+  | { type: 'diff'; data: DiffResultDisplay }
   | { type: 'task'; data: AgentResultDisplay }
   | { type: 'image'; data: TerminalImageDisplay }
   | { type: 'ansi'; data: AnsiOutput; stats?: ShellStatsBarProps };
@@ -785,6 +786,7 @@ export const ToolMessage: React.FC<ToolMessageProps> = ({
   executionStartTime,
 }) => {
   const settings = useSettings();
+  const screenReaderEnabled = useIsScreenReaderEnabled();
   const isThisShellFocused =
     (name === SHELL_COMMAND_NAME || name === SHELL_NAME) &&
     status === ToolCallStatus.Executing &&
@@ -957,8 +959,30 @@ export const ToolMessage: React.FC<ToolMessageProps> = ({
 
   // Collapse text/ANSI output for completed collapsible tools (read/search/list)
   // to reduce scrollback noise. Non-collapsible tools (command/edit/agent/MCP/etc.)
-  // always show results — their output IS the answer. Canceled tools keep partial
-  // output visible. Diff, plan, todo, task results always render regardless.
+  // keep results visible. Completed internal file writes use a diff summary;
+  // confirmation, errors, explicit expansion and screen readers retain details.
+  let compactDiffSummary: string | undefined;
+  if (
+    !screenReaderEnabled &&
+    !forceShowResult &&
+    !fullDetail &&
+    status === ToolCallStatus.Success &&
+    (name === ToolNames.WRITE_FILE || name === ToolNames.EDIT) &&
+    effectiveDisplayRenderer.type === 'diff' &&
+    !effectiveDisplayRenderer.data.truncatedForSession
+  ) {
+    const lines = effectiveDisplayRenderer.data.fileDiff.split('\n');
+    let added = 0;
+    let removed = 0;
+    let inHunk = false;
+    for (const line of lines) {
+      if (line.startsWith('@@ ')) inHunk = true;
+      else if (inHunk && line.startsWith('+')) added++;
+      else if (inHunk && line.startsWith('-')) removed++;
+    }
+    compactDiffSummary = `+${added} −${removed} ${t('({{keyHint}} to expand)', { keyHint: toggleKeyHint })}`;
+  }
+
   const shouldCollapseResult =
     !forceShowResult &&
     status === ToolCallStatus.Success &&
@@ -1066,14 +1090,19 @@ export const ToolMessage: React.FC<ToolMessageProps> = ({
                 isPending={isPending}
               />
             )}
-            {effectiveDisplayRenderer.type === 'diff' && (
-              <DiffResultRenderer
-                data={effectiveDisplayRenderer.data}
-                availableHeight={availableHeight}
-                childWidth={innerWidth}
-                settings={settings}
-              />
-            )}
+            {effectiveDisplayRenderer.type === 'diff' &&
+              (compactDiffSummary ? (
+                <Text color={theme.text.secondary} wrap="truncate-end">
+                  {compactDiffSummary}
+                </Text>
+              ) : (
+                <DiffResultRenderer
+                  data={effectiveDisplayRenderer.data}
+                  availableHeight={availableHeight}
+                  childWidth={innerWidth}
+                  settings={settings}
+                />
+              ))}
             {effectiveDisplayRenderer.type === 'ansi' && (
               <>
                 <AnsiOutputText

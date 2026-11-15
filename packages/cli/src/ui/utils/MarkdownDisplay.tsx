@@ -672,7 +672,11 @@ const MarkdownDisplayInternal: React.FC<MarkdownDisplayProps> = ({
     } else if (hrMatch) {
       addContentBlock(
         <Box key={key}>
-          <Text dimColor>---</Text>
+          <Text color={theme.border.default}>
+            {renderVisualBlocks
+              ? '─'.repeat(Math.max(1, Math.min(contentWidth, 72)))
+              : '---'}
+          </Text>
         </Box>,
       );
     } else if (blockquoteMatch && renderVisualBlocks) {
@@ -691,10 +695,13 @@ const MarkdownDisplayInternal: React.FC<MarkdownDisplayProps> = ({
       switch (level) {
         case 1:
           headerNode = (
-            <Text bold color={textColor}>
+            <Text
+              bold
+              color={renderVisualBlocks ? theme.text.accent : textColor}
+            >
               <RenderInline
                 text={headerText}
-                textColor={textColor}
+                textColor={renderVisualBlocks ? theme.text.accent : textColor}
                 enableInlineMath={renderVisualBlocks}
               />
             </Text>
@@ -702,10 +709,13 @@ const MarkdownDisplayInternal: React.FC<MarkdownDisplayProps> = ({
           break;
         case 2:
           headerNode = (
-            <Text bold color={textColor}>
+            <Text
+              bold
+              color={renderVisualBlocks ? theme.text.accent : textColor}
+            >
               <RenderInline
                 text={headerText}
-                textColor={textColor}
+                textColor={renderVisualBlocks ? theme.text.accent : textColor}
                 enableInlineMath={renderVisualBlocks}
               />
             </Text>
@@ -713,10 +723,13 @@ const MarkdownDisplayInternal: React.FC<MarkdownDisplayProps> = ({
           break;
         case 3:
           headerNode = (
-            <Text bold color={textColor}>
+            <Text
+              bold
+              color={renderVisualBlocks ? theme.text.accent : textColor}
+            >
               <RenderInline
                 text={headerText}
-                textColor={textColor}
+                textColor={renderVisualBlocks ? theme.text.accent : textColor}
                 enableInlineMath={renderVisualBlocks}
               />
             </Text>
@@ -727,7 +740,7 @@ const MarkdownDisplayInternal: React.FC<MarkdownDisplayProps> = ({
             <Text italic color={textColor}>
               <RenderInline
                 text={headerText}
-                textColor={textColor}
+                textColor={renderVisualBlocks ? theme.text.accent : textColor}
                 enableInlineMath={renderVisualBlocks}
               />
             </Text>
@@ -738,7 +751,7 @@ const MarkdownDisplayInternal: React.FC<MarkdownDisplayProps> = ({
             <Text color={textColor}>
               <RenderInline
                 text={headerText}
-                textColor={textColor}
+                textColor={renderVisualBlocks ? theme.text.accent : textColor}
                 enableInlineMath={renderVisualBlocks}
               />
             </Text>
@@ -985,7 +998,13 @@ const RenderCodeBlockInternal: React.FC<RenderCodeBlockProps> = ({
         lang,
         availableTerminalHeight,
         contentWidth - CODE_BLOCK_PREFIX_PADDING,
-        { settings, startLineNumber },
+        {
+          settings,
+          startLineNumber,
+          showLineNumbers: lang
+            ? undefined
+            : (settings?.merged.ui?.showLineNumbers ?? false),
+        },
       );
       return (
         <Box paddingLeft={CODE_BLOCK_PREFIX_PADDING} flexDirection="column">
@@ -1000,7 +1019,13 @@ const RenderCodeBlockInternal: React.FC<RenderCodeBlockProps> = ({
     lang,
     availableTerminalHeight,
     contentWidth - CODE_BLOCK_PREFIX_PADDING,
-    { settings, startLineNumber },
+    {
+      settings,
+      startLineNumber,
+      showLineNumbers: lang
+        ? undefined
+        : (settings?.merged.ui?.showLineNumbers ?? false),
+    },
   );
 
   return (
@@ -1174,7 +1199,7 @@ const RenderListItemInternal: React.FC<RenderListItemProps> = ({
     ? `${isTaskChecked ? '✓' : ICON.CIRCLE_EMPTY} `
     : type === 'ol'
       ? `${marker}. `
-      : `${marker} `;
+      : `${renderVisualBlocks ? '•' : marker} `;
   const prefixWidth = stringWidth(prefix);
   const indentation = leadingWhitespace.length;
 
