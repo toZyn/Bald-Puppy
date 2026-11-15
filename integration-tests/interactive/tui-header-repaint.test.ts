@@ -69,7 +69,7 @@ async function scenario(name: 'minimal' | 'extended') {
   const workspace = join(scratch, 'workspace');
   const runtime = join(scratch, 'runtime');
   for (const directory of [home, workspace, runtime]) mkdirSync(directory);
-  json(join(home, 'settings.json'), {
+  const settings = {
     security: {
       auth: { selectedType: 'openai' },
       folderTrust: { enabled: false },
@@ -79,7 +79,7 @@ async function scenario(name: 'minimal' | 'extended') {
     general: { enableAutoUpdate: false, showSessionRecap: false },
     ui: { enableFollowupSuggestions: false, customWittyPhrases: [phrase] },
     memory: { enableManagedAutoMemory: false, enableManagedAutoDream: false },
-  });
+  };
   json(join(scratch, 'system.json'), { $version: 4 });
   json(join(scratch, 'defaults.json'), { $version: 4 });
   // This proof executes under the same pre-bootstrap guard as the CLI. The
@@ -115,6 +115,19 @@ async function scenario(name: 'minimal' | 'extended') {
           },
     { listenHost: '127.0.0.1', baseUrlHost: '127.0.0.1' },
   );
+  json(join(home, 'settings.json'), {
+    ...settings,
+    modelProviders: {
+      openai: [
+        { id: 'qwen-vl-baseline', name: 'Fixture baseline' },
+        { id: 'fixture-second', name: 'Fixture second' },
+      ].map((model) => ({
+        ...model,
+        baseUrl: server.baseUrl,
+        envKey: 'TUI_FIXTURE_API_KEY',
+      })),
+    },
+  });
   let session: InteractiveSession | undefined;
   let columns = 100,
     rows = 30;
@@ -178,6 +191,7 @@ async function scenario(name: 'minimal' | 'extended') {
       env: {
         PATH: process.env['PATH'],
         QWEN_HOME: home,
+        TUI_FIXTURE_API_KEY: 'fixture-not-a-real-key',
         QWEN_RUNTIME_DIR: runtime,
         QWEN_CODE_SYSTEM_SETTINGS_PATH: join(scratch, 'system.json'),
         QWEN_CODE_SYSTEM_DEFAULTS_PATH: join(scratch, 'defaults.json'),
@@ -273,8 +287,30 @@ async function scenario(name: 'minimal' | 'extended') {
         [80, 12],
         [40, 10],
         [80, 30],
-      ])
-        await resize(width!, height!, `model-${width}x${height}`);
+      ]) {
+        const view = await resize(width!, height!, `model-${width}x${height}`);
+        expect(view).toContain('Select Model');
+        expect(view).toContain('▸');
+        if (height === 10) {
+          expect(view).toContain('↑↓');
+          expect(view).toContain('Enter');
+          expect(view).toContain('Esc');
+          expect(view).not.toContain('Context Window');
+          session.pressKey('\x1b[B');
+          await session.idle();
+          const navigated = await frame('model-narrow-navigate');
+          const selectedBefore = view
+            .split('\n')
+            .find((line) => line.includes('▸'));
+          const selectedAfter = navigated
+            .split('\n')
+            .find((line) => line.includes('▸'));
+          expect(selectedAfter).toContain('Fixture second');
+          expect(selectedAfter).not.toBe(selectedBefore);
+          expect(navigated).toContain('Esc');
+        }
+        if (height === 30) expect(view).toContain('Context Window');
+      }
       session.pressKey('\x1b');
       await until(
         async () => !(await session!.viewport()).includes('Select Model'),

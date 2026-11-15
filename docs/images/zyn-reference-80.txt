@@ -1,0 +1,19 @@
+
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │ > Zyn Agent                                                            │
+  │ modelo: local-fixture · new session                                  │
+  │ cwd: /workspace/project                                              │
+  └──────────────────────────────────────────────────────────────────────┘
+
+   > You
+     Explain this project.
+
+   ◉ Zyn Agent
+     I will inspect the files and explain the structure.
+   ⤳ Read files
+     README.md
+     📩 Then check the tests.
+
+   ❯   Type a message...
+ ────────────────────────────────────────────────────────────────────────────
+  > local-fixture · 1 turn                           1.0K/128K /help · esc exit

@@ -155,7 +155,7 @@ const WAIT_FOR_TIMEOUT = 5000;
 
 const expectSelectedOption = (frame: string | undefined, label: string) => {
   expect(frame).toMatch(
-    new RegExp(`›\\s*(?:\\d+\\.\\s*)?${escapeRegExp(label)}`),
+    new RegExp(`▸\\s*(?:\\d+\\.\\s*)?${escapeRegExp(label)}`),
   );
 };
 
@@ -387,8 +387,8 @@ describe('AuthDialog', { timeout: 15000 }, () => {
         const frame = lastFrame() ?? '';
         const selectedLine = frame
           .split('\n')
-          .find((line) => line.includes('›'));
-        expect(selectedLine?.replaceAll('│', '').trim()).toBe(`› ${label}`);
+          .find((line) => line.includes('▸'));
+        expect(selectedLine?.replaceAll('│', '').trim()).toBe(`▸ ${label}`);
       };
 
       await selectQwenCloud(stdin, lastFrame);

@@ -389,7 +389,7 @@ describe('ProviderSetupSteps', () => {
     );
     expect(frame).toContain('◉');
     expect(frame).toContain('○');
-    expect(frame).not.toContain('›');
+    expect(frame).not.toContain('▸');
     expect(frame).not.toContain('[x]');
     expect(frame).not.toContain('[ ]');
     expect(frame).toContain('MiniMax-M3');

@@ -6,6 +6,7 @@
 
 import { useRef } from 'react';
 import { Box, Text } from 'ink';
+import { theme } from '../semantic-colors.js';
 import { t } from '../../i18n/index.js';
 
 const MAX_DISPLAYED_QUEUED_MESSAGES = 3;
@@ -47,15 +48,20 @@ export const QueuedMessageDisplay = ({
           const preview = message.replace(/\s+/g, ' ');
 
           return (
-            <Box key={index} paddingLeft={2} width="100%">
-              <Text dimColor wrap="truncate">
-                {preview}
-              </Text>
+            <Box key={index} paddingLeft={5} paddingRight={3} width="100%">
+              <Box width={3} flexShrink={0}>
+                <Text color={theme.status.warning}>📩</Text>
+              </Box>
+              <Box flexGrow={1} flexShrink={1} minWidth={0}>
+                <Text color={theme.ui.symbol} italic wrap="truncate-end">
+                  {preview}
+                </Text>
+              </Box>
             </Box>
           );
         })}
       {messageQueue.length > MAX_DISPLAYED_QUEUED_MESSAGES && (
-        <Box paddingLeft={2}>
+        <Box paddingLeft={5}>
           <Text dimColor>
             ... (+
             {messageQueue.length - MAX_DISPLAYED_QUEUED_MESSAGES} more)
@@ -63,7 +69,7 @@ export const QueuedMessageDisplay = ({
         </Box>
       )}
       {hintEnabled && shouldShowHint && (
-        <Box paddingLeft={2}>
+        <Box paddingLeft={5}>
           <Text dimColor italic>
             {t('Ctrl+Q to queue · ↑ to edit queued messages')}
           </Text>

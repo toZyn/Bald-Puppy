@@ -212,7 +212,7 @@ export function BaseSelectionList<
             )}
 
             {/* Custom content via render prop */}
-            <Box flexGrow={1}>
+            <Box flexGrow={1} flexShrink={1} minWidth={0}>
               {renderItem(item, {
                 isSelected,
                 titleColor,

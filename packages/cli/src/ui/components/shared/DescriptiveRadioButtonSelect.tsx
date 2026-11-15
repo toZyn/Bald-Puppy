@@ -34,6 +34,8 @@ export interface DescriptiveRadioButtonSelectProps<T> {
   maxItemsToShow?: number;
   /** Gap (in rows) between each item. */
   itemGap?: number;
+  /** Keep each option on one row and omit its optional description. */
+  compact?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ export function DescriptiveRadioButtonSelect<T>({
   showScrollArrows = false,
   maxItemsToShow = 10,
   itemGap = 0,
+  compact = false,
 }: DescriptiveRadioButtonSelectProps<T>): React.JSX.Element {
   return (
     <BaseSelectionList<T, DescriptiveRadioSelectItem<T>>
@@ -70,9 +73,22 @@ export function DescriptiveRadioButtonSelect<T>({
             : item.description != null;
 
         return (
-          <Box flexDirection="column" key={item.key}>
-            <Text color={titleColor}>{item.title}</Text>
-            {hasDescription &&
+          <Box
+            flexDirection="column"
+            key={item.key}
+            minWidth={0}
+            flexShrink={1}
+            height={compact ? 1 : undefined}
+            overflow={compact ? 'hidden' : undefined}
+          >
+            <Text
+              color={titleColor}
+              wrap={compact ? 'truncate-end' : undefined}
+            >
+              {item.title}
+            </Text>
+            {!compact &&
+              hasDescription &&
               (typeof item.description === 'string' ? (
                 <Text color={theme.text.secondary}>{item.description}</Text>
               ) : (

@@ -344,6 +344,9 @@ export function ModelDialog({
   persistScope,
   availableTerminalHeight,
 }: ModelDialogProps): React.JSX.Element {
+  const compact =
+    availableTerminalHeight !== undefined && availableTerminalHeight < 18;
+  const borderless = compact && (availableTerminalHeight ?? Infinity) < 7;
   const config = useContext(ConfigContext);
   const uiState = useContext(UIStateContext);
   const settings = useSettings();
@@ -564,19 +567,24 @@ export function ModelDialog({
         ]
       : options;
   }, [availableModelEntries, isAdvisorModelMode]);
-  const modelOptionRowHeight = MODEL_OPTIONS.some(
-    ({ description }) =>
-      typeof description !== 'string' || description.trim().length > 0,
-  )
-    ? MODEL_OPTION_ROW_HEIGHT_WITH_DESCRIPTION
-    : MODEL_OPTION_ROW_HEIGHT;
+  const modelOptionRowHeight =
+    !compact &&
+    MODEL_OPTIONS.some(
+      ({ description }) =>
+        typeof description !== 'string' || description.trim().length > 0,
+    )
+      ? MODEL_OPTION_ROW_HEIGHT_WITH_DESCRIPTION
+      : MODEL_OPTION_ROW_HEIGHT;
   // The error box adds its own marginTop plus one row per line (errorPrefix +
   // blank line from the "\n\n" join + the underlying error's own lines), plus
   // a buffer since the error Text wraps and long lines can span extra rows on
   // narrow terminals.
   const errorMessageRows = errorMessage
-    ? 2 + errorMessage.split('\n').length
+    ? compact
+      ? 1
+      : 2 + errorMessage.split('\n').length
     : 0;
+  const fixedRows = compact ? (borderless ? 2 : 4) : MODEL_DIALOG_FIXED_ROWS;
   const maxModelItemsToShow =
     availableTerminalHeight === undefined
       ? MAX_MODEL_ITEMS_TO_SHOW
@@ -585,9 +593,7 @@ export function ModelDialog({
           Math.min(
             MAX_MODEL_ITEMS_TO_SHOW,
             Math.floor(
-              (availableTerminalHeight -
-                MODEL_DIALOG_FIXED_ROWS -
-                errorMessageRows) /
+              (availableTerminalHeight - fixedRows - errorMessageRows) /
                 modelOptionRowHeight,
             ),
           ),
@@ -1310,13 +1316,15 @@ export function ModelDialog({
 
   return (
     <Box
-      borderStyle="round"
+      borderStyle={borderless ? undefined : 'round'}
       borderColor={theme.border.default}
       flexDirection="column"
-      padding={1}
+      paddingX={1}
+      paddingY={compact ? 0 : 1}
       width="100%"
     >
-      <Text bold>
+      <Text bold wrap={compact ? 'truncate-end' : undefined}>
+        <Text color={theme.text.accent}>{'> '}</Text>
         {(isVoiceModelMode
           ? t('Select Voice Model')
           : isVisionModelMode
@@ -1338,8 +1346,11 @@ export function ModelDialog({
       </Text>
 
       {!hasModels ? (
-        <Box marginTop={1} flexDirection="column">
-          <Text color={theme.status.warning}>
+        <Box marginTop={compact ? 0 : 1} flexDirection="column">
+          <Text
+            color={theme.status.warning}
+            wrap={compact ? 'truncate-end' : 'wrap'}
+          >
             {t(
               'No models available for the current authentication type ({{authType}}).',
               {
@@ -1347,18 +1358,21 @@ export function ModelDialog({
               },
             )}
           </Text>
-          <Box marginTop={1}>
-            <Text color={theme.text.secondary}>
-              {t(
-                'Please configure models in settings.modelProviders or use environment variables.',
-              )}
-            </Text>
-          </Box>
+          {!compact && (
+            <Box marginTop={1}>
+              <Text color={theme.text.secondary}>
+                {t(
+                  'Please configure models in settings.modelProviders or use environment variables.',
+                )}
+              </Text>
+            </Box>
+          )}
         </Box>
       ) : (
-        <Box marginTop={1}>
+        <Box marginTop={compact ? 0 : 1}>
           <DescriptiveRadioButtonSelect
             items={MODEL_OPTIONS}
+            compact={compact}
             onSelect={handleSelect}
             onHighlight={handleHighlight}
             initialIndex={initialIndex}
@@ -1368,7 +1382,7 @@ export function ModelDialog({
         </Box>
       )}
 
-      {highlightedEntry && (
+      {highlightedEntry && !compact && (
         <Box marginTop={1} flexDirection="column">
           <Box
             borderStyle="single"
@@ -1412,16 +1426,25 @@ export function ModelDialog({
       )}
 
       {errorMessage && (
-        <Box marginTop={1} flexDirection="column" paddingX={1}>
-          <Text color={theme.status.error} wrap="wrap">
-            ✕ {errorMessage}
+        <Box marginTop={compact ? 0 : 1} flexDirection="column" paddingX={1}>
+          <Text
+            color={theme.status.error}
+            wrap={compact ? 'truncate-end' : 'wrap'}
+            aria-label={errorMessage}
+          >
+            ✕ {compact ? errorMessage.replace(/\s+/g, ' ') : errorMessage}
           </Text>
         </Box>
       )}
 
-      <Box marginTop={1} flexDirection="column">
-        <Text color={theme.text.secondary}>
-          {t('Enter to select, ↑↓ to navigate, Esc to close')}
+      <Box marginTop={compact ? 0 : 1} flexDirection="column">
+        <Text
+          color={theme.text.secondary}
+          aria-label={t('Enter to select, ↑↓ to navigate, Esc to close')}
+        >
+          {compact
+            ? '↑↓ · Enter · Esc'
+            : t('Enter to select, ↑↓ to navigate, Esc to close')}
         </Text>
       </Box>
     </Box>

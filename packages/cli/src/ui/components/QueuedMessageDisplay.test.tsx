@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { Box } from 'ink';
+import stringWidth from 'string-width';
 import { describe, it, expect } from 'vitest';
 import { render } from 'ink-testing-library';
 import { QueuedMessageDisplay } from './QueuedMessageDisplay.js';
@@ -21,7 +23,25 @@ describe('QueuedMessageDisplay', () => {
     );
 
     const output = lastFrame();
+    expect(output).toContain('📩');
     expect(output).toContain('First message');
+  });
+
+  it('keeps the queued preview inside a narrow terminal', () => {
+    const { lastFrame } = render(
+      <Box width={20}>
+        <QueuedMessageDisplay
+          messageQueue={['漢字🙂'.repeat(50)]}
+          showHint={false}
+        />
+      </Box>,
+    );
+    const rows = lastFrame()!
+      .split('\n')
+      .filter((line) => line.trim());
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain('📩');
+    expect(stringWidth(rows[0]!)).toBeLessThanOrEqual(20);
   });
 
   it('displays multiple queued messages', () => {

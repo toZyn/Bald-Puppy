@@ -32,7 +32,7 @@ Capturas del ejecutable real, reconstruidas desde las celdas de la terminal:
 
 ![Terminal de 80 columnas](docs/images/bald-puppy-terminal-80.png)
 
-[Captura de 40 columnas y método](docs/images/bald-puppy-terminal-capture.md). El diálogo de modelos necesita más de 10 filas para mostrar todas las indicaciones. La prueba automatizada se ejecuta en Linux; queda pendiente la comprobación nativa en Termux.
+[Captura de 40 columnas y método](docs/images/bald-puppy-terminal-capture.md). El selector de modelos adapta sus filas al abrir el teclado y mantiene visibles selección y navegación en 40×10. Consulta [la investigación de Zyn Agent](docs/design/zyn-tui-reference-audit.md). La prueba automatizada se ejecuta en Linux; queda pendiente la comprobación nativa en Termux.
 
 ## Procedencia
 

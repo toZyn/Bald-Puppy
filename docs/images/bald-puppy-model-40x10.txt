@@ -1,0 +1,10 @@
+     Second local turn café 漢字 Z
+
+   ◉ Bald Puppy
+     MOCK_TURN_2_DONE
+     Local mock response only.
+   > Select Model
+     1. [openai] Fixture baseline (q…
+   ▸ 2. [openai] Fixture second (fix…
+   ↑↓ · Enter · Esc
+

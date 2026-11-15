@@ -32,4 +32,4 @@ Acceptance requires successful build/typecheck/lint, relevant regression suites 
 
 ## Limits
 
-Native Android hardware and live model accounts are not available in this environment. Node 22+ is required; native optional dependencies remain platform-dependent. A 40×10 model dialog has very little space and may show only its first selectable row; navigation must recover after resizing. No universal absence-of-bugs claim is made.
+Native Android hardware and live model accounts are not available in this environment. Node 22+ is required; native optional dependencies remain platform-dependent. The model picker uses a compact height budget on a 40×10 terminal so its selected row and navigation remain visible; full metadata returns on enlargement. See [the pinned reference audit](zyn-tui-reference-audit.md) for fidelity decisions and original defects. No universal absence-of-bugs claim is made.

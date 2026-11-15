@@ -649,7 +649,71 @@ describe('<ModelDialog />', () => {
     expect(props.showScrollArrows).toBeUndefined();
   });
 
-  it('floors visible model options to 1 when the terminal is very short', () => {
+  it('keeps a compact picker instead of a clipped detail panel in five rows', () => {
+    const { container } = renderComponent(
+      { availableTerminalHeight: 5 },
+      {
+        getModel: vi.fn(() => 'model-1'),
+        getAuthType: vi.fn(() => AuthType.USE_OPENAI),
+        getAllConfiguredModels: vi.fn(() =>
+          Array.from({ length: 12 }, (_, i) => ({
+            id: `model-${i + 1}`,
+            label: `Model ${i + 1}`,
+            description: 'A long description that must not hide navigation',
+            authType: AuthType.USE_OPENAI,
+          })),
+        ),
+      },
+    );
+    const props = mockedSelect.mock.calls[0][0];
+    expect(props.compact).toBe(true);
+    expect(props.maxItemsToShow).toBe(3);
+    expect(container.textContent).toContain('↑↓ · Enter · Esc');
+    expect(container.textContent).not.toContain('Context Window');
+    expect(container.textContent).not.toContain('Modality');
+  });
+
+  it('keeps empty-state navigation in a compact picker', () => {
+    const { container } = renderComponent(
+      { availableTerminalHeight: 5 },
+      {
+        getAuthType: () => AuthType.USE_OPENAI,
+        getAllConfiguredModels: () => [],
+        getAvailableModelsForAuthType: () => [],
+      },
+    );
+    expect(container.textContent).toContain('No models available');
+    expect(container.textContent).toContain('↑↓ · Enter · Esc');
+    expect(container.textContent).not.toContain('Please configure models');
+  });
+
+  it('reserves a compact row for selection errors and keeps dismissal visible', async () => {
+    const { container, props } = renderComponent(
+      { availableTerminalHeight: 5 },
+      {
+        getAuthType: () => AuthType.USE_OPENAI,
+        getModel: () => 'first',
+        getAllConfiguredModels: () =>
+          ['first', 'second'].map((id) => ({
+            id,
+            label: id,
+            authType: AuthType.USE_OPENAI,
+          })),
+        switchModel: vi.fn().mockRejectedValue(new Error('fixture failure')),
+      },
+    );
+    await act(async () => {
+      await mockedSelect.mock.calls
+        .at(-1)![0]
+        .onSelect(`${AuthType.USE_OPENAI}::second`);
+    });
+    expect(container.textContent).toContain('fixture failure');
+    expect(container.textContent).toContain('↑↓ · Enter · Esc');
+    expect(mockedSelect.mock.calls.at(-1)![0].maxItemsToShow).toBe(2);
+    expect(props.onClose).not.toHaveBeenCalled();
+  });
+
+  it('uses the compact row budget when the terminal is very short', () => {
     renderComponent(
       { availableTerminalHeight: 5 },
       {
@@ -667,7 +731,7 @@ describe('<ModelDialog />', () => {
     );
 
     const props = mockedSelect.mock.calls[0][0];
-    expect(props.maxItemsToShow).toBe(1);
+    expect(props.maxItemsToShow).toBe(3);
   });
 
   it('accounts for the taller two-row option height when descriptions are present', () => {
